@@ -119,6 +119,184 @@ static mepa_rc indy_get_device_info(mepa_device_t *dev)
     return MEPA_RC_OK;
 }
 
+static void indy_phy_deb_pr_reg (mepa_device_t *dev,
+                                const mepa_debug_print_t pr,
+                                uint16_t mmd, uint16_t page, uint16_t addr, 
+                                const char *str, uint16_t *value)
+{
+    mepa_rc rc = MEPA_RC_OK;
+    phy_data_t *data = (phy_data_t *)dev->data;
+    mepa_port_no_t port_no = data->port_no;
+    uint16_t id = page;
+
+    if (mmd) {
+        id = mmd;
+        rc = indy_mmd_reg_rd(dev, mmd, addr, value);
+    } else if (page) {
+        rc = indy_ext_reg_rd(dev, (page-1), addr, value);
+    } else {
+        rc = indy_direct_reg_rd(dev, addr, value);
+    }
+    if(pr && (MEPA_RC_OK == rc)) {
+        pr("%-45s:  0x%02x  0x%02x   0x%04x     0x%08x\n", str, port_no, id, addr, *value);
+    }
+}
+
+static mepa_rc indy_reg_dump(struct mepa_device *dev,
+                             const mepa_debug_print_t pr)
+{
+    uint16_t val = 0;
+    uint16_t id = 0;
+
+    //Direct registers
+    pr("%-45s   PORT_NO PAGE_ID REG_ADDR   VALUE\n", "REG_NAME");
+    pr("Main Page Registers\n");
+    indy_phy_deb_pr_reg(dev, pr, 0, 0, 0, "Basic Control Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 0, 1, "Basic Status Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 0, 2, "Device Identifier 1 Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 0, 3, "Device Identifier 2 Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 0, 4, "Auto-Negotiation Advertisement Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 0, 5, "Auto-Negotiation Link Partner Base Page Ability Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 0, 6, "Auto-Negotiation Expansion Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 0, 7, "Auto-Negotiation Next Page TX Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 0, 8, "Auto-Negotiation Next Page RX Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 0, 9, "Auto-Negotiation Master Slave Control Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 0, 10, "Auto-Negotiation Master Slave Status Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 0, 13, "MMD Access Control Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 0, 14, "MMD Access Address/Data Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 0, 15, "Extended Status Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 0, 16, "PCS Loop-back Lane Skew Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 0, 17, "PCS Loop-back Swap/Polarity Control Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 0, 18, "Cable Diagnostic Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 0, 19, "Digital PMA/PCS Status Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 0, 20, "Digital AX/AN Status Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 0, 21, "RXER Counter Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 0, 22, "EP Access Control Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 0, 23, "EP Access Address/Data Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 0, 24, "GPHY Interrupt Enable Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 0, 25, "GPHY Revision Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 0, 26, "UNH Test Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 0, 27, "GPHY Interrupt Status Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 0, 28, "Digital Debug Control 1 Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 0, 29, "Digital Debug Control 2 Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 0, 30, "Reserved Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 0, 31, "Control Register", &val);
+
+    //Extended page-0,1,2,3,4,5,7,28,29,31 registers
+    pr("Extended Page-0 Registers\n");
+    indy_phy_deb_pr_reg(dev, pr, 0, 1, 0, "Debug-Mode First-Level-Select Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 1, 1, "Debug-Mode Second-Level-Select for DIGITOP Part 1 Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 1, 2, "Debug-Mode Second-Level-Select for DIGITOP Part 2 Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 1, 3, "Auto-Negotiation Timer Register 1", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 1, 4, "Auto-Negotiation Timer Register 2", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 1, 5, "Auto-Negotiation Timer Register 3", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 1, 6, "Auto-Negotiation Timer Register 4", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 1, 7, "Auto-Negotiation Timer Register 5", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 1, 8, "Auto-Negotiation Timer Register 6", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 1, 9, "Auto-Negotiation Timer Register 7", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 1, 10, "MDIX Select Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 1, 11, "Max-Timer for 1.24 Millisecond Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 1, 12, "Auto-Negotiation Wait Timer Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 1, 13, "Max Link Timer Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 1, 14, "Debug Bus Option Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 1, 15, "Fast Link Fail (FLF) Configuration and Status Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 1, 16, "Link Partner Force FD Override Register", &val);
+
+    pr("Extended Page-1 Registers\n");
+    for(id = 0; id < 239; id++) {
+        indy_phy_deb_pr_reg(dev, pr, 0, 2, id, "Extended Page 1 Registers", &val);
+    }
+
+    pr("Extended Page-2 Registers\n");
+    for(id = 0; id < 111; id++) {
+        indy_phy_deb_pr_reg(dev, pr, 0, 3, id, "Extended Page 2 Registers", &val);
+    }
+
+    pr("Extended Page-3 Registers\n");
+    for(id = 0; id < 28; id++) {
+        indy_phy_deb_pr_reg(dev, pr, 0, 4, id, "Extended Page 3 Registers", &val);
+    }
+
+    pr("Extended Page-4 Registers\n");
+    for(id = 0; id < 772; id++) {
+        indy_phy_deb_pr_reg(dev, pr, 0, 5, id, "Extended Page 4 Registers", &val);
+    }
+
+    pr("Extended Page-5 Registers\n");
+    for(id = 0; id < 708; id++) {
+        indy_phy_deb_pr_reg(dev, pr, 0, 6, id, "Extended Page 5 Registers", &val);
+    }
+
+    pr("Extended Page-7 Registers\n");
+    indy_phy_deb_pr_reg(dev, pr, 0, 8, 58, "EP7 Register 58", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 8, 59, "EP7 Register 59", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 8, 62, "EEE Link Partner Ability Override Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 8, 63, "EEE Message Code Register", &val);
+
+    pr("Extended Page-28 Registers\n");
+    for(id = 0; id < 80; id++) {
+        indy_phy_deb_pr_reg(dev, pr, 0, 29, id, "Extended Page 28 Registers", &val);
+    }
+
+    pr("Extended Page-29 Registers\n");
+    for(id = 0; id < 80; id++) {
+        indy_phy_deb_pr_reg(dev, pr, 0, 30, id, "Extended Page 29 Registers", &val);
+    }
+
+    pr("Extended Page-31 Registers\n");
+    indy_phy_deb_pr_reg(dev, pr, 0, 32, 0, "Speed Mode with TESTBUS Control Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 32, 8, "Clock Management Mode 0", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 32, 9, "Clock Management Mode 1", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 32, 10, "Clock Management Mode 2", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 32, 11, "Clock Management Mode 3", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 32, 12, "Clock Management Mode 4", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 32, 13, "Clock Management Mode 5", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 32, 14, "Clock Management Mode 6", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 32, 15, "Clock Management Mode 7", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 32, 16, "Clock Management Mode 8", &val);
+    indy_phy_deb_pr_reg(dev, pr, 0, 32, 17, "Clock Management Mode 9", &val);
+
+    //MMD-3,7 registers
+    pr("%-45s   PORT_NO DEV_ID REG_ADDR   VALUE\n", "REG_NAME");
+    pr("MMD-3 Registers\n");
+    indy_phy_deb_pr_reg(dev, pr, 3, 0x0, 0, "PCS Control 1 Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 3, 0x0, 1, "PCS Status 1 Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 3, 0x0, 20,"EEE Control and Capability Register", &val);
+
+    pr("MMD-7 Registers\n");
+    indy_phy_deb_pr_reg(dev, pr, 7, 0x0, 60,"EEE Advertisement Register", &val);
+    indy_phy_deb_pr_reg(dev, pr, 7, 0x0, 61,"EEE Link Partner Ability Register", &val);
+
+    return MEPA_RC_OK;
+}
+
+static mepa_rc indy_debug_info_dump(struct mepa_device *dev,
+                                    const mepa_debug_print_t pr,
+                                    const mepa_debug_info_t   *const info)
+{
+    mepa_rc rc = MEPA_RC_OK;
+
+    //PHY Debugging
+    switch(info->group)
+    {
+        case MEPA_DEBUG_GROUP_ALL:
+        case MEPA_DEBUG_GROUP_PHY:
+        {
+            MEPA_ENTER(dev);
+            rc = indy_reg_dump(dev, pr);
+            MEPA_EXIT(dev);
+        }
+        break;
+        default:
+            rc = MEPA_RC_OK;
+    }
+
+    //PHY_TS Debugging
+    indy_ts_debug_info_dump(dev, pr, info);
+
+    return rc;
+}
+
 static mepa_device_t *indy_probe(mepa_driver_t *drv,
                                  const mepa_callout_t    MEPA_SHARED_PTR *callout,
                                  struct mepa_callout_ctx MEPA_SHARED_PTR *callout_ctx,
@@ -135,6 +313,10 @@ static mepa_device_t *indy_probe(mepa_driver_t *drv,
     data = dev->data;
     data->port_no = board_conf->numeric_handle;
     data->events = 0;
+
+#ifdef REG_DBG
+    (void) indy_reg_dump(dev);
+#endif
 
     T_I(MEPA_TRACE_GRP_GEN, "indy driver probed for port %d", data->port_no);
     return dev;
@@ -1151,6 +1333,7 @@ mepa_drivers_t mepa_lan8814_driver_init()
             .mepa_driver_synce_clock_conf_set = indy_recovered_clk_set,
             .mepa_driver_phy_info_get = indy_info_get,
             .mepa_driver_isolate_mode_conf = indy_isolate_mode_conf,
+            .mepa_debug_info_dump = indy_debug_info_dump,
         },
         {
             .id = 0x221670,  // Single PHY based on LAN8814 instantiated in LAN966x
@@ -1181,6 +1364,7 @@ mepa_drivers_t mepa_lan8814_driver_init()
             .mepa_driver_synce_clock_conf_set = indy_recovered_clk_set,
             .mepa_driver_phy_info_get = indy_info_get,
             .mepa_driver_isolate_mode_conf = indy_isolate_mode_conf,
+            .mepa_debug_info_dump = indy_debug_info_dump,
         },
     };
 
