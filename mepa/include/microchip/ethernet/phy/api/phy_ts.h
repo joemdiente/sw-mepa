@@ -155,6 +155,7 @@ typedef struct {
     mepa_bool_t                   auto_clear_ls;
     mepa_ts_tc_op_mode_t          tc_op_mode;       /**< TC operating mode */
     mepa_bool_t                   dly_req_recv_10byte_ts; /**< Store 10-byte ingress timestamp for delay request message. Used for auto delay req/response. */
+    mepa_bool_t                   framepreempt_en;  /**< Frame Preemption*/
 } mepa_ts_init_conf_t;
 
 /** \brief PHY timestamp unit reset */
@@ -866,6 +867,30 @@ mepa_rc mepa_ts_fifo_empty(struct mepa_device                     *dev);
 mepa_rc mepa_ts_test_config(struct mepa_device                    *dev,
                             uint16_t                               test_id,
                             mepa_bool_t                            reg_dump);
+
+/**
+ * \brief PHY get Frame Preemption
+ *
+ * \param dev   [IN]   Driver instance.
+ * \param value [OUT]  Frame Preemption value to return
+ *
+ * \return
+ *   MEPA_RC_NOT_IMPLEMENTED when not supported. \n
+ *   MEPA_RC_OK on success.
+ **/
+mepa_rc mepa_ts_framepreempt_get(struct mepa_device *dev, uint8_t *const value);
+
+/**
+ * \brief PHY set Frame Preemption
+ *
+ * \param dev   [IN]  Driver instance.
+ * \param value [IN]  Frame Preemption value to set
+ *
+ * \return
+ *   MEPA_RC_NOT_IMPLEMENTED when not supported. \n
+ *   MEPA_RC_OK on success.
+ **/
+mepa_rc mepa_ts_framepreempt_set(struct mepa_device *dev, uint8_t const value);
 
 #include <microchip/ethernet/hdr_end.h>
 #endif /**< _MEPA_TS_API_H_ */
