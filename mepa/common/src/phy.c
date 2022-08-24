@@ -1113,7 +1113,7 @@ mepa_rc mepa_sqi_read(struct mepa_device *dev, uint32_t *const value)
     return dev->drv->mepa_driver_sqi_read(dev, value);
 }
 
-mepa_rc mepa_ts_framepreempt_get(struct mepa_device *dev, uint8_t *const value)
+mepa_rc mepa_ts_framepreempt_get(struct mepa_device *dev, mepa_bool_t *const value)
 {
     if (!dev->drv->mepa_ts->mepa_ts_framepreempt_get) {
         return MESA_RC_NOT_IMPLEMENTED;
@@ -1122,7 +1122,7 @@ mepa_rc mepa_ts_framepreempt_get(struct mepa_device *dev, uint8_t *const value)
     return dev->drv->mepa_ts->mepa_ts_framepreempt_get(dev, value);
 }
 
-mepa_rc mepa_ts_framepreempt_set(struct mepa_device *dev, uint8_t const value)
+mepa_rc mepa_ts_framepreempt_set(struct mepa_device *dev, mepa_bool_t const value)
 {
     if (!dev->drv->mepa_ts->mepa_ts_framepreempt_set) {
         return MESA_RC_NOT_IMPLEMENTED;
