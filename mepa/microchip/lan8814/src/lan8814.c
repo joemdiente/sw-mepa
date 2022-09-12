@@ -493,6 +493,31 @@ static mepa_rc indy_workaround_after_reset(mepa_device_t *dev)
     return MEPA_RC_OK;
 }
 
+// Work-around for 10M, 100M speed with half duplex configuration.
+static mepa_rc indy_workaround_half_duplex(mepa_device_t *dev)
+{
+    EP_WR(dev, INDY_RX_RA_FIFO_THRESHOLDS_1, 0x200);
+    EP_WR(dev, INDY_RX_RA_FIFO_THRESHOLDS_2, 0x404);
+    EP_WR(dev, INDY_RX_RA_FIFO_THRESHOLDS_3, 0x608);
+    EP_WR(dev, INDY_TX_RA_FIFO_THRESHOLDS_1, 0x200);
+    EP_WR(dev, INDY_TX_RA_FIFO_THRESHOLDS_2, 0x404);
+    EP_WR(dev, INDY_TX_RA_FIFO_THRESHOLDS_3, 0x608);
+    return MEPA_RC_OK;
+}
+
+// If earlier speed,duplex are 10M,100M with half duplex config, work-around applied earlier needs to be cleaned up.
+static mepa_rc indy_workaround_half_duplex_cleanup(mepa_device_t *dev, const mepa_conf_t *config)
+{
+    phy_data_t *data = (phy_data_t *)dev->data;
+
+    if ((data->conf.speed == MEPA_SPEED_10M || data->conf.speed == MEPA_SPEED_100M) &&
+        !data->conf.fdx) {
+        EP_WR(dev, INDY_TX_RA_FIFO_RESET, 1);
+        EP_WR(dev, INDY_RX_RA_FIFO_RESET, 1);
+    }
+    return MEPA_RC_OK;
+}
+
 static mepa_rc indy_reset(mepa_device_t *dev, const mepa_reset_param_t *rst_conf)
 {
     phy_data_t *data = (phy_data_t *) dev->data;
@@ -619,6 +644,50 @@ end:
     return MEPA_RC_OK;
 }
 
+static mepa_rc indy_conf_mdi_mode(mepa_device_t *dev, const mepa_media_mode_t mode)
+{
+    phy_data_t *data = (phy_data_t *)dev->data;
+    mepa_media_mode_t old_mode = data->conf.mdi_mode;
+    uint16_t val;
+
+    if (old_mode == mode) return MEPA_RC_OK;
+    
+    /*
+      BIT(7) = mdi_set
+        mdi_set has no function when swapoff (reg28.6) is de-asserted.
+        When swapoff is asserted, if mdi_set is asserted, chip will operate at MDI mode.
+        When swapoff is asserted, if mdi_set is de-asserted, chip will operate at MDI-X
+        mode.
+      BIT(6) = swapoff
+        1 = disable auto crossover function.
+        0 = enable auto crossover function.
+     */
+
+    // Read current MDI settings
+    RD(dev, INDY_GPHY_DBG_CTL1, &val);
+    val &= ~INDY_F_MDI_SET;
+    switch (mode) {
+      case MEPA_MEDIA_MODE_MDI:
+        val |= INDY_F_MDI_SET;
+      case MEPA_MEDIA_MODE_MDIX:
+        val |= INDY_F_SWAPOFF;
+      break;
+      default:
+        val &= ~INDY_F_SWAPOFF;
+      break;
+    }
+    // Set the current MDI
+    WRM(dev, INDY_GPHY_DBG_CTL1, val, INDY_DEF_MASK);
+
+    // Update local cache
+    data->conf.mdi_mode = mode;
+
+    T_D(MEPA_TRACE_GRP_GEN, "port %d old mdi_mode %d, new mdi_mode %d",
+        data->port_no, old_mode, data->conf.mdi_mode);
+
+    return MEPA_RC_OK;
+}
+
 static mepa_rc indy_conf_set(mepa_device_t *dev, const mepa_conf_t *config)
 {
     phy_data_t *data = (phy_data_t *)dev->data;
@@ -628,10 +697,14 @@ static mepa_rc indy_conf_set(mepa_device_t *dev, const mepa_conf_t *config)
 
     MEPA_ENTER(dev);
     if (config->admin.enable) {
+        // Check & configure MDI mode as needed
+        indy_conf_mdi_mode(dev, config->mdi_mode);
+        
         if (qsgmii_aneg != data->conf.mac_if_aneg_ena) {
             indy_qsgmii_aneg(dev, qsgmii_aneg);
         }
         if (config->speed == MEPA_SPEED_AUTO || config->speed == MEPA_SPEED_1G) {
+            indy_workaround_half_duplex_cleanup(dev, config);
             if (data->conf.admin.enable != config->admin.enable) {
                 restart_aneg = TRUE;
             }
@@ -672,12 +745,18 @@ static mepa_rc indy_conf_set(mepa_device_t *dev, const mepa_conf_t *config)
                 WRM(dev, INDY_BASIC_CONTROL, INDY_F_BASIC_CTRL_RESTART_ANEG, INDY_F_BASIC_CTRL_RESTART_ANEG);
             }
         } else if (config->speed != MEPA_SPEED_UNDEFINED) {
+            indy_workaround_half_duplex_cleanup(dev, config);
             T_I(MEPA_TRACE_GRP_GEN, "forced speed %d configured\n", config->speed);
             new_value = ((config->speed == MEPA_SPEED_100M ? 1 : 0) << 13) | (0 << 12) |
                         ((config->fdx ? 1 : 0) << 8) |
                         ((config->speed == MEPA_SPEED_1G ? 1 : 0) << 6);
             mask = INDY_BIT(13) | INDY_BIT(12) | INDY_BIT(8) | INDY_BIT(6) | INDY_F_BASIC_CTRL_SOFT_POW_DOWN | INDY_F_BASIC_CTRL_ANEG_ENA;
             WRM(dev, INDY_BASIC_CONTROL, new_value, mask);
+
+            // half duplex work-around for 10M, 100M speeds
+            if (!config->fdx) {
+                indy_workaround_half_duplex(dev);
+            }
         }
     } else {
         T_I(MEPA_TRACE_GRP_GEN, "set power down\n");
