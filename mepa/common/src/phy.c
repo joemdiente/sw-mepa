@@ -1113,6 +1113,24 @@ mepa_rc mepa_sqi_read(struct mepa_device *dev, uint32_t *const value)
     return dev->drv->mepa_driver_sqi_read(dev, value);
 }
 
+mepa_rc mepa_start_of_frame_conf_set(struct mepa_device *dev, mepa_start_of_frame_conf_t *const conf)
+{
+    if (!dev->drv->mepa_driver_start_of_frame_conf_set) {
+        return MESA_RC_NOT_IMPLEMENTED;
+    }
+
+    return dev->drv->mepa_driver_start_of_frame_conf_set(dev, conf);
+}
+
+mepa_rc mepa_start_of_frame_conf_get(struct mepa_device *dev, mepa_start_of_frame_conf_t *const rd_val)
+{
+    if (!dev->drv->mepa_driver_start_of_frame_conf_get) {
+        return MESA_RC_NOT_IMPLEMENTED;
+    }
+
+    return dev->drv->mepa_driver_start_of_frame_conf_get(dev, rd_val);
+}
+
 mepa_rc mepa_ts_framepreempt_get(struct mepa_device *dev, mepa_bool_t *const value)
 {
     if (!dev->drv->mepa_ts->mepa_ts_framepreempt_get) {
