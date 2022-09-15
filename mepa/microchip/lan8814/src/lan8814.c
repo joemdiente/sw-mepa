@@ -551,7 +551,7 @@ static mepa_rc indy_framepreempt_int_set(mepa_device_t *dev, mepa_bool_t const e
 		//Set Frame Preemption
 		val = 0;
 		EP_RD(dev, INDY_PTP_TSU_GEN_CONF, &val);
-		if (enable)
+		if (base_data->framepreempt_en)
 			val |= INDY_PTP_TSU_GEN_CONF_PREEMPTION_EN;
 		else
 			val &= ~INDY_PTP_TSU_GEN_CONF_PREEMPTION_EN;
@@ -1629,7 +1629,6 @@ static mepa_rc indy_framepreempt_get(mepa_device_t *dev, mepa_bool_t *const valu
     MEPA_ENTER(dev);
 
     *value = (base_data ? base_data->framepreempt_en : FALSE);
-
     MEPA_EXIT(dev);
 
     return MEPA_RC_OK;
@@ -1674,6 +1673,7 @@ mepa_drivers_t mepa_lan8814_driver_init()
             .mepa_driver_sqi_read = indy_sqi_read,
             .mepa_driver_start_of_frame_conf_set = indy_start_of_frame_conf_set,
             .mepa_driver_start_of_frame_conf_get = indy_start_of_frame_conf_get,
+            .mepa_driver_framepreempt_get = indy_framepreempt_get,
         },
         {
             .id = 0x221670,  // Single PHY based on LAN8814 instantiated in LAN966x
