@@ -137,45 +137,33 @@ continuation SMD values SMD-C[0,1,2,3] (0x61, 0x52, 0x9E or 0x2A).
 The API `mepa_start_of_frame_conf_get` is used to get the start of frame
 configuration
 
-=== Frame Preemption
+== PCH/MCH and Frame Preemption support
 
-==== Definition (Ref. IEEE 802.3Qbu-2016_A26_Framepreemption)
-The suspension of the transmission of a preemptable frame to allow one or 
-more express frames to be transmitted before transmission of the preemptable 
-frame is resumed
+The extension-type (refered to as `ExtTy` in the datasheets) in the preamble is
+used by the PCH/MCH and the Preemption features.
 
-The default value of frame preemption status is express
+A MAC which support PCH/MCH, but does not support preemption will transmit
+frames with `ExtType` set to either `0b00` or `0b01`:
 
-==== MAC Merge Packet (mPacket) (Ref. 8023br-2016)
-This mPacket format starts with the normal preamble but supplements the normal 
-Start of Frame Delimiter (SFD = 0xD5) with newly defined Start mPacket
-Delimiters (SMDs) of various values. Also added for certain mPackets is a
-fragment count octet.
+- `0b00`: indicate that the frame shall be forwarded normally and not perform any
+  timestamping operations.
+- `0b01`: indicate that the frame shall be timestamped.
 
-==== 1588 FRAME PARSING
-1588 processing is supported with Frame Preemption but only for Express frames.
-The frame parser will ignore any packet that does not contain the standard SFD.
+A MAC which support PCH/MCH preemption will always set the `ExtType` to `0b10`,
+regardless of if the frame shall be timestamped or not. In this case extention
+bit 31 is used to signal if a frame shall be timestamped or not.
 
-* Standalone Mode - The SMD and SFD characters are passed transparently across 
-QSGMII (no PCH/MCH header).
+The PHY and MAC needs to agree on how time-stamp requests are signal in the
+frame. By default the PHY will use `ExtType` `0b00` or `0b01` and discard frames
+with `0b10`.
 
-* PCH/MCH Mode - The SMD and SFD characters are passed across Q-USGMII using 
-the PCH or MCH header.
+If the PHY is connected to a MAC which generates frames with `ExtType == 0b10`
+and signales timestamp request in extension bit 31, then
+`mepa_reset_param_t::framepreempt_en` shall be set to true when calling
+`mepa_reset()`.
 
-** Frame Preemption Enabled
-*** ExtTy[1:0] = 00 - Ignored
-*** ExtTy[1:0] = 01 - Invalid
-*** ExtTy[1:0] = 10 - PTP Timestamp
-*** ExtTy[1:0] = 11 - Invalid
+The configured value can be read back using `mepa_framepreempt_get()`.
 
-** Frame Preemption Disabled
-*** ExtTy[1:0] = 00 - Ignored
-*** ExtTy[1:0] = 01 - PTP Timestamp
-*** ExtTy[1:0] = 10 - Invalid
-*** ExtTy[1:0] = 11 - Invalid
-
-The API `mepa_reset()` helps to set the framepremption configuration
-The API `mepa_framepreempt_get()` helps to get the current configuration of Frame Preemption
 
 == API References
 
