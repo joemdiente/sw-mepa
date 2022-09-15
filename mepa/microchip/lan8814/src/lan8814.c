@@ -518,55 +518,56 @@ static mepa_rc indy_workaround_half_duplex_cleanup(mepa_device_t *dev, const mep
     return MEPA_RC_OK;
 }
 
-static mepa_rc indy_framepreempt_int_set(mepa_device_t *dev, mepa_bool_t const enable)
+static mepa_rc indy_framepreempt_set(mepa_device_t *dev, mepa_bool_t const enable)
 {
-	uint16_t val;
-	mepa_bool_t ptp_enable;
-	phy_data_t *data = (phy_data_t *)dev->data;
-	mepa_device_t *base_dev = data->base_dev;
-	phy_data_t *base_data = base_dev ? ((phy_data_t *)(base_dev->data)) : NULL;
+    uint16_t val;
+    mepa_bool_t ptp_enable;
+    phy_data_t *data = (phy_data_t *)dev->data;
+    mepa_device_t *base_dev = data->base_dev;
+    phy_data_t *base_data = base_dev ? ((phy_data_t *)(base_dev->data)) : NULL;
 
-        if (!data || !base_dev || !base_data)
-		return MEPA_RC_OK;
+    if (!data || !base_dev || !base_data)
+        return MEPA_RC_OK;
 
-	//Update base port with reset_conf::framepreempt_en
-	if (base_dev == dev)
-		base_data->framepreempt_en = enable;
+    MEPA_ENTER(dev);
 
-	//if framepreempt enabled
-	if (base_data->framepreempt_en) {
-		//Read PTP setting
-		EP_RD(dev, INDY_PTP_CMD_CTL, &val);
+    //Update base port with reset_conf::framepreempt_en
+    if (base_dev == dev)
+        base_data->framepreempt_en = enable;
 
-		ptp_enable = (val & INDY_PTP_CMD_CTL_DISABLE) ? FALSE : TRUE;
-		if (!ptp_enable)
-			ptp_enable = (val & INDY_PTP_CMD_CTL_ENABLE) ? TRUE : FALSE;
+    //Read PTP setting
+    EP_RD(dev, INDY_PTP_CMD_CTL, &val);
 
-		//Disable PTP
-		if (ptp_enable) {
-			val |= INDY_PTP_CMD_CTL_DISABLE;
-			EP_WRM(dev, INDY_PTP_CMD_CTL, val, INDY_DEF_MASK);
-		}
+    ptp_enable = (val & INDY_PTP_CMD_CTL_DISABLE) ? FALSE : TRUE;
+    if (!ptp_enable)
+        ptp_enable = (val & INDY_PTP_CMD_CTL_ENABLE) ? TRUE : FALSE;
 
-		//Set Frame Preemption
-		val = 0;
-		EP_RD(dev, INDY_PTP_TSU_GEN_CONF, &val);
-		if (base_data->framepreempt_en)
-			val |= INDY_PTP_TSU_GEN_CONF_PREEMPTION_EN;
-		else
-			val &= ~INDY_PTP_TSU_GEN_CONF_PREEMPTION_EN;
-		EP_WRM(dev, INDY_PTP_TSU_GEN_CONF, val, INDY_DEF_MASK);
+    //Disable PTP
+    if (ptp_enable) {
+        val |= INDY_PTP_CMD_CTL_DISABLE;
+        EP_WRM(dev, INDY_PTP_CMD_CTL, val, INDY_DEF_MASK);
+    }
 
-		//Enable PTP
-		if (ptp_enable) {
-			val = 0;
-			EP_RD(dev, INDY_PTP_CMD_CTL, &val);
-			val |= (INDY_PTP_CMD_CTL_ENABLE | ~INDY_PTP_CMD_CTL_DISABLE);
-			EP_WRM(dev, INDY_PTP_CMD_CTL, val, INDY_DEF_MASK);
-		}
-	}
+    //Set Frame Preemption
+    val = 0;
+    EP_RD(dev, INDY_PTP_TSU_GEN_CONF, &val);
+    if (base_data->framepreempt_en)
+        val |= INDY_PTP_TSU_GEN_CONF_PREEMPTION_EN;
+    else
+        val &= ~INDY_PTP_TSU_GEN_CONF_PREEMPTION_EN;
+    EP_WRM(dev, INDY_PTP_TSU_GEN_CONF, val, INDY_DEF_MASK);
 
-	return MEPA_RC_OK;
+    //Enable PTP
+    if (ptp_enable) {
+        val = 0;
+        EP_RD(dev, INDY_PTP_CMD_CTL, &val);
+        val |= (INDY_PTP_CMD_CTL_ENABLE | ~INDY_PTP_CMD_CTL_DISABLE);
+        EP_WRM(dev, INDY_PTP_CMD_CTL, val, INDY_DEF_MASK);
+    }
+
+    MEPA_EXIT(dev);
+
+    return MEPA_RC_OK;
 }
 
 static mepa_rc indy_reset(mepa_device_t *dev, const mepa_reset_param_t *rst_conf)
@@ -603,8 +604,9 @@ static mepa_rc indy_reset(mepa_device_t *dev, const mepa_reset_param_t *rst_conf
             indy_event_enable_set(dev, data->events, TRUE);
         }
     }
+
     //Configure frame preemption
-    indy_framepreempt_int_set(dev, rst_conf->framepreempt_en);
+    indy_framepreempt_set(dev, rst_conf->framepreempt_en);
 
     return MEPA_RC_OK;
 }
