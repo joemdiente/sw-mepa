@@ -518,6 +518,26 @@ static mepa_rc indy_workaround_half_duplex_cleanup(mepa_device_t *dev, const mep
     return MEPA_RC_OK;
 }
 
+static mepa_rc indy_framepreempt_int_set(mepa_device_t *dev, mepa_bool_t const enable)
+{
+	phy_data_t *data = (phy_data_t *)dev->data;
+	uint16_t val;
+
+	//Set Frame Preemption
+	val = 0;
+	EP_RD(dev, INDY_PTP_TSU_GEN_CONF, &val);
+	if (enable)
+		val |= INDY_PTP_TSU_GEN_CONF_PREEMPTION_EN;
+	else
+		val &= ~INDY_PTP_TSU_GEN_CONF_PREEMPTION_EN;
+	EP_WRM(dev, INDY_PTP_TSU_GEN_CONF, val, INDY_DEF_MASK);
+
+	//Update local cache
+	data->framepreempt_en = enable;
+
+	return MEPA_RC_OK;
+}
+
 static mepa_rc indy_reset(mepa_device_t *dev, const mepa_reset_param_t *rst_conf)
 {
     phy_data_t *data = (phy_data_t *) dev->data;
@@ -547,6 +567,9 @@ static mepa_rc indy_reset(mepa_device_t *dev, const mepa_reset_param_t *rst_conf
     T_I(MEPA_TRACE_GRP_GEN, "Reconfiguring the phy after reset");
     // Reconfigure the phy after reset
     if (rst_conf->reset_point == MEPA_RESET_POINT_DEFAULT) {
+	//Configure frame preemption
+	indy_framepreempt_int_set(dev, rst_conf->framepreempt_en);
+
         indy_conf_set(dev, &data->conf);
         if (data->events) {
             indy_event_enable_set(dev, data->events, TRUE);
@@ -1566,6 +1589,20 @@ static mepa_rc indy_start_of_frame_conf_get(mepa_device_t *dev, mepa_start_of_fr
     return MEPA_RC_OK;
 }
 
+static mepa_rc indy_framepreempt_get(mepa_device_t *dev, mepa_bool_t *const value)
+{
+    phy_data_t *data = (phy_data_t *)dev->data;
+
+    MEPA_ASSERT(value == NULL);
+    MEPA_ENTER(dev);
+
+    *value = data->framepreempt_en;
+
+    MEPA_EXIT(dev);
+
+    return MEPA_RC_OK;
+}
+
 mepa_drivers_t mepa_lan8814_driver_init()
 {
     static const int nr_indy_drivers = 2;
@@ -1639,6 +1676,7 @@ mepa_drivers_t mepa_lan8814_driver_init()
             .mepa_driver_sqi_read = indy_sqi_read,
             .mepa_driver_start_of_frame_conf_set = indy_start_of_frame_conf_set,
             .mepa_driver_start_of_frame_conf_get = indy_start_of_frame_conf_get,
+            .mepa_driver_framepreempt_get = indy_framepreempt_get,
         },
     };
 

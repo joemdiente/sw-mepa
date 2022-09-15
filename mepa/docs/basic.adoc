@@ -137,6 +137,46 @@ continuation SMD values SMD-C[0,1,2,3] (0x61, 0x52, 0x9E or 0x2A).
 The API `mepa_start_of_frame_conf_get` is used to get the start of frame
 configuration
 
+=== Frame Preemption
+
+==== Definition (Ref. IEEE 802.3Qbu-2016_A26_Framepreemption)
+The suspension of the transmission of a preemptable frame to allow one or 
+more express frames to be transmitted before transmission of the preemptable 
+frame is resumed
+
+The default value of frame preemption status is express
+
+==== MAC Merge Packet (mPacket) (Ref. 8023br-2016)
+This mPacket format starts with the normal preamble but supplements the normal 
+Start of Frame Delimiter (SFD = 0xD5) with newly defined Start mPacket
+Delimiters (SMDs) of various values. Also added for certain mPackets is a
+fragment count octet.
+
+==== 1588 FRAME PARSING
+1588 processing is supported with Frame Preemption but only for Express frames.
+The frame parser will ignore any packet that does not contain the standard SFD.
+
+* Standalone Mode - The SMD and SFD characters are passed transparently across 
+QSGMII (no PCH/MCH header).
+
+* PCH/MCH Mode - The SMD and SFD characters are passed across Q-USGMII using 
+the PCH or MCH header.
+
+** Frame Preemption Enabled
+*** ExtTy[1:0] = 00 - Ignored
+*** ExtTy[1:0] = 01 - Invalid
+*** ExtTy[1:0] = 10 - PTP Timestamp
+*** ExtTy[1:0] = 11 - Invalid
+
+** Frame Preemption Disabled
+*** ExtTy[1:0] = 00 - Ignored
+*** ExtTy[1:0] = 01 - PTP Timestamp
+*** ExtTy[1:0] = 10 - Invalid
+*** ExtTy[1:0] = 11 - Invalid
+
+The API `mepa_reset()` helps to set the framepremption configuration
+The API `mepa_framepreempt_get()` helps to get the current configuration of Frame Preemption
+
 == API References
 
 `mepa_clause22_read()` +
@@ -159,4 +199,5 @@ configuration
 `mepa_delete()` +
 `mepa_sqi_read()` +
 `mepa_start_of_frame_conf_set()` +
-`mepa_start_of_frame_conf_get()`
+`mepa_start_of_frame_conf_get()` +
+`mepa_framepreempt_get()`

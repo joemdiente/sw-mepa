@@ -130,7 +130,6 @@ typedef struct {
     mepa_ts_fifo_read_t           fifo_cb;              // Fifo TS callback
     indy_ts_port_latencies_t      default_latencies;    // Default port latencies
     mepa_ts_pps_conf_t            pps;
-    mepa_bool_t                   framepreempt_en;      // Frame Preemption
 } indy_ts_data_t;
 
 typedef struct {
@@ -147,6 +146,7 @@ typedef struct {
     mepa_bool_t              link_status;
     mepa_cable_diag_result_t cable_diag;
     mepa_start_of_frame_conf_t sof_conf;
+    mepa_bool_t		     framepreempt_en;      // Frame Preemption
     indy_ts_data_t          ts_state;
 } phy_data_t;
 
