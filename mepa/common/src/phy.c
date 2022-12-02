@@ -1159,3 +1159,31 @@ mepa_rc mepa_selftest_read(struct mepa_device *dev, mepa_selftest_info_t *const 
 
     return dev->drv->mepa_driver_selftest_read(dev, inf);
 }
+
+mepa_rc mepa_macsec_init_set(struct mepa_device *dev, const
+                             mepa_macsec_init_t *const macsec_init)
+{
+    if (!dev->drv->mepa_macsec) {
+        return MESA_RC_NOT_IMPLEMENTED;
+    }
+
+    if (!dev->drv->mepa_macsec->mepa_macsec_init_set) {
+        return MESA_RC_NOT_IMPLEMENTED;
+    }
+
+    return dev->drv->mepa_macsec->mepa_macsec_init_set(dev, macsec_init);
+}
+
+mepa_rc mepa_macsec_init_get(struct mepa_device *dev,
+                             mepa_macsec_init_t *const macsec_init)
+{
+    if (!dev->drv->mepa_macsec) {
+        return MESA_RC_NOT_IMPLEMENTED;
+    }
+
+    if (!dev->drv->mepa_macsec->mepa_macsec_init_get) {
+        return MESA_RC_NOT_IMPLEMENTED;
+    }
+
+    return dev->drv->mepa_macsec->mepa_macsec_init_get(dev, macsec_init);
+}
