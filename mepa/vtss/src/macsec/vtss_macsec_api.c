@@ -5,7 +5,7 @@
 // Avoid "vtss_api.h not used in module vtss_macsec_api.c"
 /*lint --e{766} */
 #include "vtss_phy_api.h"
-
+#include "../phy_10g/chips/venice/vtss_venice_regs_fc_buffer.h"
 #if defined(VTSS_FEATURE_MACSEC)
 
 #define VTSS_TRACE_GROUP VTSS_TRACE_GROUP_MACSEC // Must come before #include "vtss_state.h"
@@ -1834,6 +1834,17 @@ static vtss_rc vtss_macsec_init_set_priv(vtss_state_t                      *vtss
                     VTSS_F_MACSEC_EGR_MACSEC_CTL_REGS_MACSEC_ENA_CFG_SW_RST |
                     VTSS_F_MACSEC_EGR_MACSEC_CTL_REGS_MACSEC_ENA_CFG_MACSEC_BYPASS_ENA);
 
+        //DTS 416131 FC Buffer TX_ENA is toggled when macsec is disabled - Vitesse approved workaround
+        /* Disable FC Buffer TX_ENA */
+
+        CSR_WARM_WRM(port_no, VTSS_FC_BUFFER_CONFIG_FC_ENA_CFG,
+           0,
+           VTSS_F_FC_BUFFER_CONFIG_FC_ENA_CFG_TX_ENA);
+
+       /* Enable FC Buffer TX_ENA */
+        CSR_WARM_WRM(port_no, VTSS_FC_BUFFER_CONFIG_FC_ENA_CFG,
+           VTSS_F_FC_BUFFER_CONFIG_FC_ENA_CFG_TX_ENA,
+           VTSS_F_FC_BUFFER_CONFIG_FC_ENA_CFG_TX_ENA);
         /* Clear the internals */
         memset(&vtss_state->macsec_conf[port_no], 0, sizeof(vtss_state->macsec_conf[port_no]));
 
@@ -4477,11 +4488,11 @@ static vtss_rc vtss_macsec_tx_sa_status_get_priv(vtss_state_t                *vt
 
     if (xpn) {
         if (aes_128) {
-            MACSEC_CNT64_RD(port.port_no, VTSS_MACSEC_INGR_XFORM_RECORD_REGS_XFORM_REC_DATA10(record),
-                            VTSS_MACSEC_INGR_XFORM_RECORD_REGS_XFORM_REC_DATA11(record), value);
+            MACSEC_CNT64_RD(port.port_no, VTSS_MACSEC_EGR_XFORM_RECORD_REGS_XFORM_REC_DATA10(record),
+                                                  VTSS_MACSEC_EGR_XFORM_RECORD_REGS_XFORM_REC_DATA11(record), value);
         } else {
-            MACSEC_CNT64_RD(port.port_no, VTSS_MACSEC_INGR_XFORM_RECORD_REGS_XFORM_REC_DATA14(record),
-                            VTSS_MACSEC_INGR_XFORM_RECORD_REGS_XFORM_REC_DATA15(record), value);
+            MACSEC_CNT64_RD(port.port_no, VTSS_MACSEC_EGR_XFORM_RECORD_REGS_XFORM_REC_DATA14(record),
+                                                  VTSS_MACSEC_EGR_XFORM_RECORD_REGS_XFORM_REC_DATA15(record), value);
         }
         /* Workaround for Packet Number Transmit (i.e. NextPN - 1) */
         value += 1;
@@ -4500,7 +4511,6 @@ static vtss_rc vtss_macsec_tx_sa_status_get_priv(vtss_state_t                *vt
 
     return VTSS_RC_OK;
 }
-
 
 static vtss_rc vtss_macsec_secy_port_status_get_priv(vtss_state_t                      *vtss_state,
                                                      const vtss_macsec_port_t          port,

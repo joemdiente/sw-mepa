@@ -1404,6 +1404,9 @@ static vtss_rc phy_10g_kr_conf_init(vtss_state_t *vtss_state,
     int i;
     vtss_rc rc = VTSS_RC_OK;
     vtss_phy_10g_base_kr_conf_t *kr_conf = &vtss_state->phy_10g_state[port_no].kr_conf;
+    vtss_phy_10g_base_kr_conf_t *host_kr_conf = &vtss_state->phy_10g_state[port_no].host_kr_conf;
+
+    /* LINE Side output buffer settings */
     CSR_RD(port_no, VTSS_LINE_PMA_32BIT_SD10G65_OB_SD10G65_OB_CFG0, &cfg0);
     CSR_RD(port_no, VTSS_LINE_PMA_32BIT_SD10G65_OB_SD10G65_OB_CFG1, &cfg1);
     CSR_RD(port_no, VTSS_LINE_PMA_32BIT_SD10G65_OB_SD10G65_OB_CFG2, &cfg2);
@@ -1436,22 +1439,22 @@ static vtss_rc phy_10g_kr_conf_init(vtss_state_t *vtss_state,
         v[i] = cfg2>>(6*i) & 0x3f;
         if (v[i] & 0x20) v[i] |= ~0x3f; /* sign extension */
     }
-    kr_conf->cm1 = (-v[3]- v[0] - 1)/2;
-    kr_conf->c0 = (v[3] - v[1] -1)/2;
-    kr_conf->c1 = (v[1] - v[0])/2;
-    kr_conf->ampl = 1275 - 25*VTSS_X_HOST_PMA_32BIT_SD10G65_OB_SD10G65_OB_CFG0_LEVN(cfg0) -
+    host_kr_conf->cm1 = (-v[3]- v[0] - 1)/2;
+    host_kr_conf->c0 = (v[3] - v[1] -1)/2;
+    host_kr_conf->c1 = (v[1] - v[0])/2;
+    host_kr_conf->ampl = 1275 - 25*VTSS_X_HOST_PMA_32BIT_SD10G65_OB_SD10G65_OB_CFG0_LEVN(cfg0) -
         200*((cfg0 & VTSS_F_HOST_PMA_32BIT_SD10G65_OB_SD10G65_OB_CFG0_INCR_LEVN) ? 1 : 0);
 
     r_ctrl = VTSS_X_HOST_PMA_32BIT_SD10G65_OB_SD10G65_OB_CFG1_PREDRV_R_CTRL(cfg1);
     c_ctrl = VTSS_X_HOST_PMA_32BIT_SD10G65_OB_SD10G65_OB_CFG1_PREDRV_C_CTRL(cfg1);
-    kr_conf->slewrate = VTSS_SLEWRATE_INVALID;
+    host_kr_conf->slewrate = VTSS_SLEWRATE_INVALID;
     for (i = 0; i < VTSS_SLEWRATE_INVALID; i++) {
         if ((r_ctrl == predrv_ctrl_table[i] [1]) && (c_ctrl == predrv_ctrl_table[i] [0])) {
-            kr_conf->slewrate = i;
+            host_kr_conf->slewrate = i;
         }
     }
-    kr_conf->en_ob = ( cfg0 & VTSS_F_HOST_PMA_32BIT_SD10G65_OB_SD10G65_OB_CFG0_EN_OB) ? TRUE : FALSE;
-    kr_conf->ser_inv = ( cfg0 & VTSS_F_HOST_PMA_32BIT_SD10G65_OB_SD10G65_OB_CFG0_SER_INV) ? TRUE : FALSE;
+    host_kr_conf->en_ob = ( cfg0 & VTSS_F_HOST_PMA_32BIT_SD10G65_OB_SD10G65_OB_CFG0_EN_OB) ? TRUE : FALSE;
+    host_kr_conf->ser_inv = ( cfg0 & VTSS_F_HOST_PMA_32BIT_SD10G65_OB_SD10G65_OB_CFG0_SER_INV) ? TRUE : FALSE;
 
     return rc;
 }
@@ -12538,25 +12541,43 @@ static vtss_rc malibu_phy_10g_clause_37_control_set(vtss_state_t *vtss_state,
 
     if (!vtss_state->sync_calling_private) {
         for (i = l_h; i < pcs_cnt_max; i++) {
+            //  i=0 ==> Line Side
+            //  i=1 ==> Host Side
             if(i) {
                 control = &vtss_state->phy_10g_state[port_no].clause_37;
             } else {
                 control = &vtss_state->phy_10g_state[port_no].host_clause_37;
             }
 
-            VTSS_I(" port %u clause 37 aneg is being configured on 1G PCS of %s \n",port_no,i? "LINE" : "HOST");
+            VTSS_I(" port %u clause 37 aneg is being configured on 1G PCS of %s \n",port_no, i? "LINE" : "HOST");
             /* Aneg capabilities for this port */
             VTSS_RC(phy_10g_clause_37_adv_set(&value, &control->advertisement, control->enable));
             CSR_WARM_WRM(port_no, PST(VTSS, i, PCS1G_PCS1G_CFG_STATUS_PCS1G_ANEG_CFG2),
                     PST(VTSS_F, i, PCS1G_PCS1G_CFG_STATUS_PCS1G_ANEG_CFG2_ADV_ABILITY(value)),
                     PST(VTSS_M, i, PCS1G_PCS1G_CFG_STATUS_PCS1G_ANEG_CFG2_ADV_ABILITY));
 
-            /* Restart aneg */
-            CSR_COLD_WRM(port_no, PST(VTSS, i,PCS1G_PCS1G_CFG_STATUS_PCS1G_ANEG_CFG),
+            CSR_RD(port_no, PST(VTSS, i, PCS1G_PCS1G_CFG_STATUS_PCS1G_MODE_CFG), &value);
+
+            /* Per PCSC1G_ANEG_CFG2, If PCS1G_MODE_CFG is in SGMII Mode, Must set SW_Resolve_ENA in PCS1G_ANEG_CFG */
+            if (value & PST(VTSS_F, i, PCS1G_PCS1G_CFG_STATUS_PCS1G_MODE_CFG_SGMII_MODE_ENA)) {
+                VTSS_I(" port %u clause 37 1G PCS of %s   Restart ANEG - SGMII MODE \n",port_no,i? "LINE" : "HOST");
+                /* Restart aneg */
+                CSR_COLD_WRM(port_no, PST(VTSS, i, PCS1G_PCS1G_CFG_STATUS_PCS1G_ANEG_CFG),
+                    PST(VTSS_F, i, PCS1G_PCS1G_CFG_STATUS_PCS1G_ANEG_CFG_ANEG_RESTART_ONE_SHOT) |
+                    PST(VTSS_F, i, PCS1G_PCS1G_CFG_STATUS_PCS1G_ANEG_CFG_SW_RESOLVE_ENA) |
+                    PST(VTSS_F, i, PCS1G_PCS1G_CFG_STATUS_PCS1G_ANEG_CFG_ANEG_ENA),
+                    PST(VTSS_F, i, PCS1G_PCS1G_CFG_STATUS_PCS1G_ANEG_CFG_ANEG_RESTART_ONE_SHOT) |
+                    PST(VTSS_F, i, PCS1G_PCS1G_CFG_STATUS_PCS1G_ANEG_CFG_SW_RESOLVE_ENA) |
+                    PST(VTSS_F, i, PCS1G_PCS1G_CFG_STATUS_PCS1G_ANEG_CFG_ANEG_ENA));
+            } else {
+                VTSS_I(" port %u clause 37 1G PCS of %s   Restart ANEG - NOT SGMII MODE\n",port_no,i? "LINE" : "HOST");
+                /* Restart aneg */
+                CSR_COLD_WRM(port_no, PST(VTSS, i,PCS1G_PCS1G_CFG_STATUS_PCS1G_ANEG_CFG),
                     PST(VTSS_F, i, PCS1G_PCS1G_CFG_STATUS_PCS1G_ANEG_CFG_ANEG_RESTART_ONE_SHOT) |
                     PST(VTSS_F, i, PCS1G_PCS1G_CFG_STATUS_PCS1G_ANEG_CFG_ANEG_ENA),
                     PST(VTSS_F, i, PCS1G_PCS1G_CFG_STATUS_PCS1G_ANEG_CFG_ANEG_RESTART_ONE_SHOT) |
                     PST(VTSS_F, i, PCS1G_PCS1G_CFG_STATUS_PCS1G_ANEG_CFG_ANEG_ENA));
+            }
 
             if (!control->enable) {
                 /* Disable Aneg */
