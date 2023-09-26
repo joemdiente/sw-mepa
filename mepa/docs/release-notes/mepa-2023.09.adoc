@@ -22,6 +22,7 @@ This release contains following contents:
 * VSC8584 new feature
 * VSC8512/22 bug fix
 * VSC8258 new feature
+* LAN8770 driver support
 
 === API Enhancements
 
@@ -46,3 +47,8 @@ This release contains following contents:
 ==== VSC8512
 
 * MEPA-428    Using MEPA, unable to get VSC8512/22 to initialize properly
+
+==== LAN8770
+
+* LAN87-87    Add MEPA API support
+* LAN87-107   Add MEPA TC10 support
