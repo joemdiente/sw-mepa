@@ -38,9 +38,10 @@ This release contains following contents:
 
 * MEPA-314    FEFI feature support with MAC and Media link status handling for 1G PHYs 
 
-==== VSC8258
+==== LAN8770
 
-* MEPA-311    Warmstart Support for 10G PHYs
+* LAN87-87    Add MEPA API support
+* LAN87-107   Add MEPA TC10 support
 
 === Bug Fixes
 
@@ -48,7 +49,3 @@ This release contains following contents:
 
 * MEPA-428    Using MEPA, unable to get VSC8512/22 to initialize properly
 
-==== LAN8770
-
-* LAN87-87    Add MEPA API support
-* LAN87-107   Add MEPA TC10 support
