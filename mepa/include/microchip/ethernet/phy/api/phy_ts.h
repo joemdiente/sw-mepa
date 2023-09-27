@@ -637,7 +637,7 @@ mepa_rc mepa_ts_pps_conf_set (struct mepa_device              *dev,
 
 /**
  * \brief Get ingress PTP packet classifier configuration.
- * 
+ *
  * \param dev        [IN]  Driver instance.
  * \param flow index [IN]  Flow index.
  * \param conf       [OUT] PTP packet Classifier configuration.
@@ -687,9 +687,9 @@ mepa_rc mepa_ts_rx_classifier_conf_set(struct mepa_device         *dev,
  * \param dev        [IN]  Driver instance.
  * \param flow index [IN]  Flow index.
  * \param conf       [IN]  PTP packet Classifier configuration.
- * 
+ *
  * \return
- *   MEPA_RC_NOT_IMPLEMENTED when not supported.\n 
+ *   MEPA_RC_NOT_IMPLEMENTED when not supported.\n
  *   MEPA_RC_OK on success.\n
  *   MEPA_RC_ERROR on error.
  *
@@ -760,7 +760,7 @@ mepa_rc mepa_ts_tx_clock_conf_set(struct mepa_device              *dev,
 
 /**
  * \brief Get statistics.
- * 
+ *
  * \param dev  [IN]  Driver instance.
  * \param stat [OUT] Timestamp statistics.
  *
