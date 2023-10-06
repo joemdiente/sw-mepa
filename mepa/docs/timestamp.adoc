@@ -76,8 +76,8 @@ mepa_rc test_ptp_init(mepa_device_t *dev) {
      *  #if defined(MEPA_HAS_VTSS)
      *      ptp_cfg.clk_src = MEPA_TS_CLOCK_SRC_INTERNAL;
      *      ptp_cfg.clk_freq = MEPA_TS_CLOCK_FREQ_250M;            //ONLY
-     *      ptp_cfg.rx_ts_len = MEPA_TS_RX_TIMESTAMP_LEN_30BIT;   
-     *      ptp_cfg.rx_ts_pos = MEPA_TS_RX_TIMESTAMP_POS_IN_PTP;   
+     *      ptp_cfg.rx_ts_len = MEPA_TS_RX_TIMESTAMP_LEN_30BIT;
+     *      ptp_cfg.rx_ts_pos = MEPA_TS_RX_TIMESTAMP_POS_IN_PTP;
      *      ptp_cfg.tx_fifo_mode = MEPA_TS_FIFO_MODE_NORMAL;
      *  #endif
      *
@@ -134,7 +134,7 @@ can be used to get/set egress classifier configurations.
 
 Example pseudo code for sequence::
 
-The following pseudo code provides an example on how MEPA TS classifier 
+The following pseudo code provides an example on how MEPA TS classifier
 configuration can be done.
 
 NOTE: The code is conceptual, and does not include application specific
@@ -306,7 +306,7 @@ Application can use following APIs to load/save PHY LTC values when 1PPS is
 received. 1PPS on a HW pin is board specific which needs to be handled by
 application. Upon 1PPS rising edge, either TS registers can be loaded/read
 depending on the `mepa_ts_ltc_ls_en()` option used.
-LOAD to update PHY LTC from TS registers upon 1PPS pulse. 
+LOAD to update PHY LTC from TS registers upon 1PPS pulse.
 SAVE to read PHY LTC into TS registers upon 1PPS pulse.
 This has to be continuous process by application depending on the requirement.
 
@@ -325,7 +325,7 @@ Sequence is as below:
 * Wait for 1PPS pulse on GPIO3.
 * Up on 1PPS, `mepa_ts_ltc_ls_en()` with `MEPA_TS_CMD_LOAD` to update the PHY LTC from
 TS registers.
- 
+
 ==== Saving time from PHY LTC
 
 Application need to call `mepa_ts_ltc_ls_en()` with option `MEPA_TS_CMD_SAVE`.
@@ -343,7 +343,7 @@ Load operation can be performed when desired for protocol time adjustment and
 so need not be a continuous operation. Most of the times, save operation will
 be used to read time from the PHY and check if it is in synchronization with
 system time or not.
- 
+
 === Reading TS from FIFO
 
 TS FIFO has two interfaces: SPI and MDIO/Parallel interface to access the

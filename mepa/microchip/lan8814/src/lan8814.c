@@ -139,7 +139,7 @@ static mepa_rc indy_get_device_info(mepa_device_t *dev)
 
 static void indy_phy_deb_pr_reg (mepa_device_t *dev,
                                 const mepa_debug_print_t pr,
-                                uint16_t mmd, uint16_t page, uint16_t addr, 
+                                uint16_t mmd, uint16_t page, uint16_t addr,
                                 const char *str, uint16_t *value)
 {
     mepa_rc rc = MEPA_RC_OK;
@@ -773,7 +773,7 @@ static mepa_rc indy_conf_mdi_mode(mepa_device_t *dev, const mepa_media_mode_t mo
     uint16_t val;
 
     if (old_mode == mode) return MEPA_RC_OK;
-    
+
     /*
       BIT(7) = mdi_set
         mdi_set has no function when swapoff (reg28.6) is de-asserted.
@@ -822,7 +822,7 @@ static mepa_rc indy_conf_set(mepa_device_t *dev, const mepa_conf_t *config)
     if (config->admin.enable) {
         // Check & configure MDI mode as needed
         indy_conf_mdi_mode(dev, config->mdi_mode);
-        
+
         if (qsgmii_aneg != data->conf.mac_if_aneg_ena) {
             indy_qsgmii_aneg(dev, qsgmii_aneg);
         }
@@ -1541,7 +1541,7 @@ static mepa_rc indy_recovered_clk_set(mepa_device_t *dev, const mepa_synce_clock
     if (conf->dst == MEPA_SYNCE_CLOCK_DST_1) {
         EP_WR(dev, INDY_RCVRD_CLK_OUT_SEL_1, clkout_src);
         EP_WR(dev, INDY_RCVRD_CLK_OUT_DIV_1, divider);
-    } else if (conf->dst == MEPA_SYNCE_CLOCK_DST_2) { 
+    } else if (conf->dst == MEPA_SYNCE_CLOCK_DST_2) {
         EP_WR(dev, INDY_RCVRD_CLK_OUT_SEL_2, clkout_src);
         EP_WR(dev, INDY_RCVRD_CLK_OUT_DIV_2, divider);
     }
@@ -1979,7 +1979,7 @@ static mepa_rc indy_prbs7_init(mepa_device_t *dev)
             {0x0015, 0x5000, 0}, // Set los_bias
             {0x0015, 0x5009, 0}, // Set los_level
             {0x0015, 0x5029, 0}, // Set acjt_level
-            {0x0015, 0x5429, 0}, // Set enable for tx_vboost_lvl/los_bias/los_level/acjt_level 
+            {0x0015, 0x5429, 0}, // Set enable for tx_vboost_lvl/los_bias/los_level/acjt_level
             {0x1002, 0x007f, 0}, // Set the TX amplitude (LANEX_DIG_TX_OVRD_DRV_LO.AMPLITUDE)
             {0x1002, 0x0c7f, 0}, // Set the TX preemphasis (LANEX_DIG_TX_OVRD_DRV_LO.PREEMPH)
             {0x1002, 0x4c7f, 0}, // Enable override (LANEX_DIG_TX_OVRD_DRV_LO.EN)
@@ -1989,7 +1989,7 @@ static mepa_rc indy_prbs7_init(mepa_device_t *dev)
             {0x0003, 0x0012, 0}, // Force Rtune High(SUP.DIG.RTUNE_DEBUG.MAN_TUNE)
             {0x0003, 0x0010, 0}, // Force Rtune Low(SUP.DIG.RTUNE_DEBUG.MAN_TUNE)
             {0x1001, 0x01c4, 0}, // Set tx_vboost_en (LANEX.DIG.TX.OVRD_IN_HI.TX_VBOOST_EN
-            {0x1001, 0x03c4, 0}, // Enable override (LANEX.DIG.TX.OVRD_IN_LO.TX_VBOOST_EN_OVRD) 
+            {0x1001, 0x03c4, 0}, // Enable override (LANEX.DIG.TX.OVRD_IN_LO.TX_VBOOST_EN_OVRD)
             {0x1006, 0x3004, 0}, // Set Rx Eq to use a fixed setting (LANEX.DIG.RX.OVRD_IN_HI.RX_EQ_EN)
             {0x1006, 0x3084, 0}, // Enable override (LANEX.DIG.RX.OVRD_IN_HI.RX_EQ_EN_OVRD)
             {0x1006, 0x3284, 0}, // Set Rx Eq value(LANEX_DIG_RX_OVRD_IN_HI.RX_EQ)
@@ -2075,7 +2075,7 @@ static mepa_rc indy_prbs7_loopback(mepa_device_t *dev, mepa_prbs_loopback_t loop
     mepa_rc rc;
     int i;
     if(loopback == MEPA_PRBS_INTERNAL_LOOPBACK) {
-        struct serd_set serdes_settings[] = { 
+        struct serd_set serdes_settings[] = {
             {0x1000, 0x02a1, 0}, // Enable internal loopback (LANEX.DIG.TX.OVRD_IN_LO.LOOPBK_EN)
             {0x1000, 0x02a3, 0}, // Enable override (LANEX.DIG.TX.OVRD_IN_LO.TX_LOOPBK_EN_OVRD)
             {0x1000, 0x02a3, 0}, // Turn off Beacon Enable (LANEX.DIG.TX.OVRD_IN_LO.TX_BEACON_EN)
@@ -2145,7 +2145,7 @@ static mepa_rc indy_prbs7_set(mepa_device_t *dev, mepa_bool_t enable, mepa_prbs_
         rc = indy_serdes_set(dev, 0x1015,0x0000,0);
         if (rc < 0)
             return rc;
-        
+
         //QSGMII Hard Reset
         EP_WR(dev, INDY_QSGMII_HARD_RESET,0x1);
     }
