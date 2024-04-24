@@ -1,6 +1,6 @@
 
 
-set(inc_mepa ../../me/include ../include)
+set(inc_mepa ../../me/include ../../sw-mesa/me/include ../include)
 
 set(src_vtss src/vtss.c
              src/vtss_ts.c

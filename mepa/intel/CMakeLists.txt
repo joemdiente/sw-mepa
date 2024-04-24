@@ -4,7 +4,7 @@ MEPA_DRV(LIB_NAME mepa_drv_intel
                   GPY_API_v2.7.1.1/src/api/phy/gpy211_chip.c
                   GPY_API_v2.7.1.1/src/api/phy/gpy211_phy.c
          DEFS     -DP31G_B0=1 -DSAFE_C_LIB=0
-         INCL_PUB ../../me/include ../include
+         INCL_PUB ../../me/include  ../../sw-mesa/me/include ../include
          INCL_PRI GPY_API_v2.7.1.1/src/os/linux
                   GPY_API_v2.7.1.1/src/inc)
 
