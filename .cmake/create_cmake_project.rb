@@ -55,7 +55,7 @@ tc_base = nil
 # download SW_mesa
 
 if c[:mesa]
-  mesa_base = "../#{c[:mesa]}"
+  mesa_base = "#{c[:mesa]}"
   branch = "#{c[:mesa_branch]}"
 
   if File.exist? mesa_base
@@ -63,7 +63,7 @@ if c[:mesa]
     run "sh -c \"sudo rm -r #{mesa_base}\""
   end
   puts "Fetching latest copy..."
-  run "sh -c \"cd ../ && git clone --branch #{branch} https://github.com/microchip-ung/mesa.git\""
+  run "sh -c \"git clone --quiet --branch #{branch} https://github.com/microchip-ung/mesa.git sw-mesa\""
 end
 
 

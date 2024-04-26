@@ -4,7 +4,7 @@ MEPA_DRV(LIB_NAME mepa_drv_aqr
                   vtss_platform/AQ_PlatformRoutines.c
                   AQR_API_2.6.1/src/AQ_API.c
                   AQR_API_2.6.1/src/AQ_API_flash.c
-         INCL_PUB ../../me/include ../include
+         INCL_PUB ../../me/include ../../sw-mesa/me/include ../include
          INCL_PRI AQR_API_2.6.1/include
                   AQR_API_2.6.1/include/registerMap
                   AQR_API_2.6.1/include/registerMap/APPIA
