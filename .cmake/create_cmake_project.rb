@@ -63,7 +63,8 @@ if c[:mesa]
     run "sh -c \"sudo rm -r #{mesa_base}\""
   end
   puts "Fetching latest copy..."
-  run "sh -c \"git clone --quiet --branch #{branch} https://github.com/microchip-ung/mesa.git sw-mesa\""
+  run "sh -c \"git clone --quiet --branch #{branch} https://bitbucket.microchip.com/scm/unge/sw-mesa.git\""
+  #run "sh -c \"git clone --quiet --branch #{branch} https://github.com/microchip-ung/mesa.git sw-mesa\""
 end
 
 
