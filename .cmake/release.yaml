@@ -22,7 +22,7 @@ conf:
 
   # git_tag_prv points to a GIT changeset corresponding to the previous release.
   # MANDATORY.
-  git_tag_prv: 2024.03-soak
+  git_tag_prv: TEST_TAG1
 
   # git_tag_cur points to a GIT changeset corresponding to the upcoming release.
   # In general, this can be set to HEAD, but for release note generation based
@@ -61,14 +61,14 @@ conf:
   # true.
   #
   # OPTIONAL. Defaults to false.
-  list_by_component: true
+  # list_by_component: true
 
   # If set to true, the script will write a section to the release note with
   # "New features" based on Bugzilla's "Type" field (set to 'SW Feature') and
   # Jira's "Issue Type" field (set to 'Story').
   #
   # OPTIONAL. Defaults to false.
-  # list_new_features: true
+  list_new_features: true
 
   # This goes into the top of the release note as a one-liner description
   # Normally, you want to leave this at its default value.

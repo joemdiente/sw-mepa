@@ -314,13 +314,12 @@ rescue
 end
 
 if $do_internal_checks
- #TODO
-#    begin
-#        release_note()
-#        run "cp images/release_note_*.txt #{$ws}"
-#    rescue
-#        $res.addSibling(ResultNode.new("Release note", "Failed"))
-#    end
+    begin
+        release_note()
+        run "cp images/release_note_*.txt #{$ws}"
+    rescue
+        $res.addSibling(ResultNode.new("Release note", "Failed"))
+    end
 
     begin
         licenses_create($ws)
