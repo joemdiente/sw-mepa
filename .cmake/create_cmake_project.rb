@@ -58,13 +58,15 @@ if c[:mesa]
   mesa_base = "#{c[:mesa]}"
   branch = "#{c[:mesa_branch]}"
 
-  if File.exist? mesa_base
+  if File.exist? "sw-mesa"
     puts "Removing old code base..."
-    run "sh -c \"sudo rm -r #{mesa_base}\""
+    run "sh -c \"rm -r sw-mesa\""
   end
   puts "Fetching latest copy..."
-  run "sh -c \"git clone --quiet --branch #{branch} https://bitbucket.microchip.com/scm/unge/sw-mesa.git\""
-  #run "sh -c \"git clone --quiet --branch #{branch} https://github.com/microchip-ung/mesa.git sw-mesa\""
+  dw_file = "mesa-#{c[:mesa]}-#{c[:mesa_id]}@#{c[:mesa_branch]}"
+  bcmd = "sudo .cmake/docker/mchp-install-pkg -t mesa/#{c[:mesa]}-#{c[:mesa_id]}@#{c[:mesa_branch]} #{dw_file}"
+  run bcmd
+  run "mkdir -p sw-mesa && cp -r /opt/mscc/#{dw_file}/* sw-mesa"
 end
 
 

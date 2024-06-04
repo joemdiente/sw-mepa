@@ -91,9 +91,11 @@ presets:
         :cmake:            "arm-cortex_a8-linux-gnu/xstax/release/x86_64-linux/bin/cmake"
         :legal:            "arm-cortex_a8-linux-gnu/xstax/release/legal-info"
 
-    x86:
+    x86_64:
+        :arch:             "x86_64"
         :cmake_flags:      "-DCMAKE_BUILD_TYPE=Release -DBUILD_MESA_CAPABILITY_DUMPER=true -DBUILD_MESA_DEMO=false"
         :brsdk:            "2023.02.8-1052"
+        :brsdk_branch:     "brsdk"
         :toolchain_branch: "toolchain"
         :toolchainfile:    "x86_64-nocona-linux-gnu/share/buildroot/toolchainfile.cmake"
         :cmake:            "x86_64-nocona-linux-gnu/bin/cmake"

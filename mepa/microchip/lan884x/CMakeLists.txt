@@ -1,7 +1,7 @@
 
 MEPA_DRV(LIB_NAME mepa_drv_lan884x
          SRCS     src/lan884x.c
-         INCL_PUB ../../../me/include  ../../../sw-mesa/me/include ../../include
+         INCL_PUB ../../../me/include ../../include
          INCL_PRI lan884x)
 
 option(MEPA_lan884x "Add LAN884x support in libmeba" OFF)

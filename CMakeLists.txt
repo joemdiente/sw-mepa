@@ -3,21 +3,21 @@
 
 cmake_minimum_required(VERSION 3.5)
 
-project(vtss_api)
+project(mepa_api)
 
 include(CMakeParseArguments)
 include(.cmake/common.cmake)
 
 option(BUILD_ALL         "Enable all" OFF)
 option(BUILD_STATIC_LIBS "Build static versions of the libraries" ON)
-option(BUILD_SHARED_LIBS "Build shared versions of the libraries" ON)
-option(BUILD_MESA_ALL    "Build the MESA libraries" OFF)
+#option(BUILD_SHARED_LIBS "Build shared versions of the libraries" ON)
+#option(BUILD_MESA_ALL    "Build the MESA libraries" OFF)
 option(BUILD_DOXYGEN     "Build doxygen" OFF)
-option(MESA_PRE_AG       "Use pre-generated mesa-ag layer if exist" ON)
-option(BUILD_MESA_DEMO   "Build the MESA demo" ON)
+#option(MESA_PRE_AG       "Use pre-generated mesa-ag layer if exist" ON)
+#option(BUILD_MESA_DEMO   "Build the MESA demo" ON)
 option(MESA_OPSYS_LINUX  "Build the MESA for Linux" ON)
-option(MESA_OPSYS_LMSTAX "Build the MESA for LMStaX" OFF)
-option(MESA_WRAP         "Generate and build the MESA Wrapper" ON)
+option(MESA_OPSYS_VELOCITYSP "Build the MESA for VelocitySP" OFF)
+#option(MESA_WRAP         "Generate and build the MESA Wrapper" ON)
 
 mark_as_advanced(BUILD_MESA_DEMO MESA_PRE_AG BUILD_DOXYGEN)
 
@@ -25,7 +25,7 @@ include(.cmake/doxygen.cmake)
 
 add_subdirectory(mepa)
 
-include_directories(sw-mesa/me/include)
+include_directories(me/include)
 include_directories(sw-mesa/mesa/include)
 include_directories(sw-mesa/meba/include)
 include_directories(mepa/include)
@@ -35,7 +35,7 @@ if (${MESA_OPSYS_LINUX})
     MATH(EXPR OS_CNT "${OS_CNT} + 1")
 endif ()
 
-if (${MESA_OPSYS_LMSTAX})
+if (${MESA_OPSYS_VELOCITYSP})
     MATH(EXPR OS_CNT "${OS_CNT} + 1")
 endif ()
 
@@ -44,9 +44,9 @@ if (NOT ${OS_CNT} EQUAL 1)
 endif ()
 
 # MEBA is only supported on Linux
-if (${MESA_OPSYS_LINUX})
-    add_subdirectory(sw-mesa/meba)
-endif ()
+#if (${MESA_OPSYS_LINUX})
+#	add_subdirectory(sw-mesa/meba)
+#endif ()
 
 #find_program(CCACHE_FOUND ccache)
 #if(CCACHE_FOUND)
@@ -180,8 +180,8 @@ set(LIST_OF_API_TARGETS)
 
 if (${MESA_OPSYS_LINUX})
     set(GLOBAL_DEFS -DVTSS_OPSYS_LINUX -DVTSS_OPT_SYMREG=1)
-elseif (${MESA_OPSYS_LMSTAX})
-    set(GLOBAL_DEFS -DVTSS_OPSYS_LMSTAX -DVTSS_OPT_SYMREG=0)
+elseif (${MESA_OPSYS_VELOCITYSP})
+	set(GLOBAL_DEFS -DVTSS_OPSYS_VELOCITYSP -DVTSS_OPT_SYMREG=0)
 endif ()
 
 macro(API_TARGET)
@@ -190,7 +190,7 @@ macro(API_TARGET)
 
   cmake_parse_arguments(A "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
   if (${BUILD_SHARED_LIBS})
-      option(${A_LIB}        "Build the API for ${A_CHIP} (${A_LIB})" OFF)
+	  option(${A_LIB}        "Build the API for ${A_CHIP} (${A_LIB})" OFF)
   endif()
   option(${A_LIB}_static "Build the static API for ${A_CHIP} (${A_LIB})" OFF)
   if (${BUILD_MESA_ALL} OR ${BUILD_ALL})
@@ -241,14 +241,14 @@ macro(API_TARGET)
   list(APPEND LIST_OF_API_TARGETS ${A_LIB})
 endmacro(API_TARGET)
 
-API_TARGET(LIB vsc7558TSN            CHIP 7558TSN       DEFS -DVTSS_OPT_PORT_COUNT=57)
-API_TARGET(LIB vsc7558MSEC           CHIP 7558TSN       DEFS -DVTSS_OPT_PORT_COUNT=57)
-API_TARGET(LIB lan9698RED            CHIP 969X          DEFS -DVTSS_OPT_PORT_COUNT=30)
-API_TARGET(LIB lan966x               CHIP 966X)
-API_TARGET(LIB lan966x_lm            CHIP 966X          DEFS -DVTSS_OPT_LIGHT=1 -DVTSS_OPT_TRACE=1 -DVTSS_OPT_DEBUG_PRINT=1)
-API_TARGET(LIB lan966x_ad            CHIP 966X          DEFS -DVTSS_OPT_FPGA=2)
-API_TARGET(LIB lan969x_lm            CHIP 969X          DEFS -DVTSS_OPT_PORT_COUNT=30 -DVTSS_OPT_LIGHT=1 -DVTSS_OPT_TRACE=0 -DVTSS_OPT_TRACE_ERROR=0 -DVTSS_O
-PT_DEBUG_PRINT=1)
+#API_TARGET(LIB vsc7558TSN            CHIP 7558TSN       DEFS -DVTSS_OPT_PORT_COUNT=57)
+#API_TARGET(LIB vsc7558MSEC           CHIP 7558TSN       DEFS -DVTSS_OPT_PORT_COUNT=57)
+#API_TARGET(LIB lan9698RED            CHIP 969X          DEFS -DVTSS_OPT_PORT_COUNT=30)
+#API_TARGET(LIB lan966x               CHIP 966X)
+#API_TARGET(LIB lan966x_lm            CHIP 966X          DEFS -DVTSS_OPT_LIGHT=1 -DVTSS_OPT_TRACE=1 -DVTSS_OPT_DEBUG_PRINT=1)
+#API_TARGET(LIB lan966x_ad            CHIP 966X          DEFS -DVTSS_OPT_FPGA=2)
+#API_TARGET(LIB lan969x_lm            CHIP 969X          DEFS -DVTSS_OPT_PORT_COUNT=30 -DVTSS_OPT_LIGHT=1 -DVTSS_OPT_TRACE=0 -DVTSS_OPT_TRACE_ERROR=0 -DVTSS_O
+#PT_DEBUG_PRINT=1)
 
 option(BUILD_MESA_CAPABILITY_DUMPER "Build all the mesa capability dumper function" OFF)
 mark_as_advanced(BUILD_MESA_CAPABILITY_DUMPER)

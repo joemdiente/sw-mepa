@@ -1,18 +1,3 @@
-Switch architecture name conversion table
-=========================================
-
-* Caracal   <=> VSC7423, VSC7428, VSC7429
-* SparX-III <=> VSC7424, VSC7425, VSC7426, VSC7427
-* Jaguar-2  <=> VSC7438, VSC7442, VSC7444, VSC7448, VSC7449, VSC7464, VSC7468,
-* Serval-T  <=> VSC7410, VSC7415, VSC7430, VSC7435, VSC7436, VSC7437, VSC7440
-* Ocelot    <=> VSC7511, VSC7512, VSC7513, VSC7514
-* SparX-5   <=> VSC7546, VSC7549, VSC7552, VSC7556, VSC7558
-* SparX-5i  <=> VSC7546TSN, VSC7549TSN, VSC7552TSN, VSC7556TSN, VSC7558TSN
-* LAN966x   <=> LAN9662, LAN9668
-* LAN969x   <=> LAN9694, LAN9694TSN, LAN9694RED, LAN9691VAO,
-                LAN9696, LAN9696TSN, LAN9696RED, LAN9692VAO,
-                LAN9698, LAN9698TSN, LAN9698RED, LAN9693VAO
-
 PHY architecture name conversion table:
 =======================================
 

@@ -157,7 +157,6 @@ else
     git_branch = %x(git symbolic-ref --short -q HEAD).chop
 end
 out_name = "mepa-#{git_id}@#{git_branch}"
-puts "Out name: #{out_name}"
 File.open("#{$ws}/.mscc-version", 'w') do |version|
     version.puts(%Q(mepa_sha="#{git_sha}"))
     version.puts(%Q(mepa_id="#{git_id}"))
@@ -269,6 +268,7 @@ $tar = "#{$ws}/#{$ws}.tar"
 # copy the latest mepa into mesa
 run "cd sw-mesa; rm -r mepa"
 run "cp -r mepa sw-mesa/"
+run "cp -r me sw-mesa/"
 run "cp -r .cmake sw-mesa/"
 run "tar -cf #{$tar} -C sw-mesa/ ."
 # Unpack sources for removal of unwanted files into temporary folder
