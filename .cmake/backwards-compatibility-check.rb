@@ -7,7 +7,7 @@ require_relative "./resultnode.rb"
 
 top = File.expand_path(File.dirname(File.dirname(__FILE__)))
 
-x = Dir.glob "images/mepa-*.tar.gz"
+x = Dir.glob "images/mesa-*.tar.gz"
 if x.size != 1
     puts "Unexpected API count: [#{x.join(", ")}]"
     exit 1
@@ -302,9 +302,13 @@ $default_configs = "istax_multi.mk"
 # Fix check to include both viper changes and poe changes
 
 # PTP IO pin interrupts related change
-check("backwards-check",                # Name of check
-      "4ad1ba4ef2@master.laguna-ptp",   # Apl release to use
-      $default_configs)                 # Configs to build
+#check("backwards-check",                # Name of check
+#      "4ad1ba4ef2@master.laguna-ptp",   # Apl release to use
+#      $default_configs)                 # Configs to build
+
+check("backwards-check",               # Name of check
+      "3249852312@poe_appl_2_5_24",    # Apl release to use
+      $default_configs)                # Configs to build
 #TODO
 
 #check("backwards-check",              # Name of check

@@ -58,10 +58,10 @@ end.parse!
 
 #pp $o
 
-$p_mesa = File.expand_path "#{$o[:src]}/../../"
+$p_mepa = File.expand_path "#{$o[:src]}/../"
 $bsp = File.expand_path $o[:bsp]
 #puts "BSP-TOP: #{$bsp}"
-#puts "MESA-TOP: #{$p_mesa}"
+#puts "MEPA-TOP: #{$p_mepa}"
 
 $machines = {
     "ls1046a" => {
@@ -75,11 +75,11 @@ $machines = {
           {
             :file => "#{$bsp}/arm64-armv8_a-linux-gnu/xstax/release/mchp-ls1046a-lan966x_vtss.dtb",
             :overlays => [
-                { :name => "6813_0@ls1046a", :file => "#{$p_mesa}/meba/dt/meba_lan966x_6813_0.dtso"},
-                # { :name => "6849_0@ls1046a", :file => "#{$p_mesa}/meba/dt/meba_lan966x_6849_0.dtso"},
-                { :name => "8290_0@ls1046a", :file => "#{$p_mesa}/meba/dt/meba_lan966x_8290_0.dtso"},
-                { :name => "8291_0@ls1046a", :file => "#{$p_mesa}/meba/dt/meba_lan966x_8291_0.dtso"},
-                { :name => "8309_0@ls1046a", :file => "#{$p_mesa}/meba/dt/meba_lan966x_8309_0.dtso"},
+                { :name => "6813_0@ls1046a", :file => "#{$p_mepa}/meba/dt/meba_lan966x_6813_0.dtso"},
+                # { :name => "6849_0@ls1046a", :file => "#{$p_mepa}/meba/dt/meba_lan966x_6849_0.dtso"},
+                { :name => "8290_0@ls1046a", :file => "#{$p_mepa}/meba/dt/meba_lan966x_8290_0.dtso"},
+                { :name => "8291_0@ls1046a", :file => "#{$p_mepa}/meba/dt/meba_lan966x_8291_0.dtso"},
+                { :name => "8309_0@ls1046a", :file => "#{$p_mepa}/meba/dt/meba_lan966x_8309_0.dtso"},
             ]
           },
         ],
@@ -98,25 +98,25 @@ $machines = {
           {
             :file => "#{$bsp}/arm-cortex_a8-linux-gnu/xstax/release/lan966x-mesa-pcb8291.dtb",
             :overlays => [
-                { :name => "lan9662_ung8291_0_at_lan966x", :file => "#{$p_mesa}/meba/dt/meba_lan966x_8291_0.dtso"},
+                { :name => "lan9662_ung8291_0_at_lan966x", :file => "#{$p_mepa}/meba/dt/meba_lan966x_8291_0.dtso"},
             ]
           },
           {
             :file => "#{$bsp}/arm-cortex_a8-linux-gnu/xstax/release/lan966x-mesa-pcb8309.dtb",
             :overlays => [
-                { :name => "lan9662_ung8309_0_at_lan966x", :file => "#{$p_mesa}/meba/dt/meba_lan966x_8309_0.dtso"},
+                { :name => "lan9662_ung8309_0_at_lan966x", :file => "#{$p_mepa}/meba/dt/meba_lan966x_8309_0.dtso"},
             ]
           },
           {
             :file => "#{$bsp}/arm-cortex_a8-linux-gnu/xstax/release/lan966x-mesa-pcb8290.dtb",
             :overlays => [
-                { :name => "lan9668_ung8290_0_at_lan966x", :file => "#{$p_mesa}/meba/dt/meba_lan966x_8290_0.dtso"},
+                { :name => "lan9668_ung8290_0_at_lan966x", :file => "#{$p_mepa}/meba/dt/meba_lan966x_8290_0.dtso"},
             ]
           },
           {
             :file => "#{$bsp}/arm-cortex_a8-linux-gnu/xstax/release/lan966x-mesa-pcb8281.dtb",
             :overlays => [
-                { :name => "lan9668_ung8281_0_at_lan966x", :file => "#{$p_mesa}/meba/dt/meba_lan966x_8281_0.dtso"},
+                { :name => "lan9668_ung8281_0_at_lan966x", :file => "#{$p_mepa}/meba/dt/meba_lan966x_8281_0.dtso"},
             ]
           },
         ],
@@ -135,7 +135,7 @@ $machines = {
           {
             :file => "#{$bsp}/arm64-armv8_a-linux-gnu/xstax/release/lan969x_appl_ev23x71a.dtb",
             :overlays => [
-                { :name => "lan9698_ev23x71a_0_at_lan969x", :file => "#{$p_mesa}/meba/dt/meba_lan969x_8398_0.dtso"},
+                { :name => "lan9698_ev23x71a_0_at_lan969x", :file => "#{$p_mepa}/meba/dt/meba_lan969x_8398_0.dtso"},
             ]
           },
         ],
@@ -447,7 +447,7 @@ when "ext4"
     sys "rm -rf #{stage1_dir} #{$o[:name]}.ext4 #{$o[:name]}.ext4.gz #{$o[:name]}_initrd.squashfs"
 
     basic_rootfs install_dir
-    sys "cp -r #{$p_mesa}/mesa/demo/mepa_scripts #{install_dir}/root"
+    sys "cp -r #{$p_mepa}/mepa_demo/mepa_scripts #{install_dir}/root"
     sys "mkdir -p #{install_dir}/boot"
 
     sys "mkdir -p #{stage1_dir}/sbin"

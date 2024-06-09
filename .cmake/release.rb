@@ -266,40 +266,16 @@ end
 
 # Make source-archive
 $tar = "#{$ws}/#{$ws}.tar"
-# copy the latest mepa into mesa
-run "cd sw-mesa; rm -r mepa"
-run "cd sw-mesa; rm -r meba mesa/demo"
-run "cp -r board-configs/ sw-mesa/meba"
-run "cp -r mepa_demo sw-mesa/mesa/demo"
-run "cp -r mepa sw-mesa/"
-run "cp -r me sw-mesa/"
-run "cp -r .cmake sw-mesa/"
-run "tar -cf #{$tar} -C sw-mesa/ ."
+run "git archive --prefix=./#{$ws}/ --format=tar HEAD > #{$tar}"
 # Unpack sources for removal of unwanted files into temporary folder
 # because we are going to make a tar ball in the parent folder,
 # which results in a warning if the source files were in the same folder.
-run "mkdir -p #{$ws}/tmp/#{$ws}"
-run "tar -xmf #{$tar} -C #{$ws}/tmp/#{$ws}"
+run "mkdir -p #{$ws}/tmp"
+run "tar -xmf #{$tar} -C #{$ws}/tmp"
+run "cp -r sw-mesa #{$ws}/tmp/#{$ws}"
+
 # Make easytest source copy
 #run "tar -C #{$ws}/tmp/#{$ws}/mesa/demo/ -cz test -f images/et.tar.gz"
-
-tmp = "#{$ws}/tmp/#{$ws}"
-run "mkdir #{tmp}/build_src"
-run "cd #{tmp}/build_src; cmake .."
-#run "cd #{tmp}/build_src; make -j12 mesa_src;"
-#run "cd #{tmp}/build_src; make -j12 mesa_rpc_src"
-#run "mkdir #{tmp}/mesa/ag"
-#run "mkdir #{tmp}/mesa/demo/ag"
-#run "cp #{tmp}/build_src/mesa-ag/mesa.c #{tmp}/build_src/mesa-ag/mesa.h #{tmp}/mesa/ag/."
-#run "cp #{tmp}/build_src/mesa/demo/mesa-ag/mesa-rpc.c #{tmp}/build_src/mesa/demo/mesa-ag/mesa-rpc.h #{tmp}/mesa/demo/ag/."
-
-# Delete unwanted files
-run "rm -rf #{$ws}/tmp/release_ws/.cmake/release* #{$tar}"
-run "rm -rf #{$ws}/tmp/release_ws/.cmake/licenses.rb"
-run "rm -rf #{$ws}/tmp/release_ws/.cmake/backwards*"
-run "rm -rf #{$ws}/tmp/release_ws/.cmake/copyright*"
-run "rm -rf #{$ws}/tmp/release_ws/mesa/demo/test"
-run "rm -rf #{tmp}/build_src"
 
 # Re-pack
 run "tar -C #{$ws}/tmp -cf #{$tar} ./#{$ws}"
@@ -382,15 +358,15 @@ $res.addSibling($res_bin)
 $res.addSibling($res_lic) if $do_internal_checks
 
 step $res, "Update CapDB" do
-    run "#{$ws}/mesa/docs/scripts/capdump.rb -o #{$ws}/mesa/docs/capdb.yaml -c #{$ws}/mesa/include/microchip/ethernet/switch/api/capability.h -C #{$ws}/bin/x86/capability_dumper #{$ws}/bin/x86/libvsc*.so", "capdb"
+    run "#{$ws}/sw-mesa/mesa/docs/scripts/capdump.rb -o #{$ws}/sw-mesa/mesa/docs/capdb.yaml -c #{$ws}/sw-mesa/mesa/include/microchip/ethernet/switch/api/capability.h -C #{$ws}/bin/x86/capability_dumper #{$ws}/bin/x86/libvsc*.so", "capdb"
     # TODO, check if equal to the one checked into git
-    run "cp #{$ws}/mesa/docs/capdb.yaml images/.", "capdb"
+    run "cp #{$ws}/sw-mesa/mesa/docs/capdb.yaml images/.", "capdb"
 end
 
 step $res, "API Doc" do
     # TODO, check for errors
     rev = $yaml['conf']['friendly_name_cur']
-    if /MESA-(.*)/ =~ rev
+    if /MEPA-(.*)/ =~ rev
         rev = $1
     end
 
@@ -458,6 +434,15 @@ end
 # Preserve backwards compatibility with application
 #run("ln -s mipsel #{$ws}/bin/mips")
 
+# Update latest mepa and board-configs in sw-mesa for backward compatability check
+run("rm -rf sw-mesa/mepa")
+run("cp -r #{$ws}/mepa sw-mesa/mepa")
+
+# create a mesa.tar.gz , which is needed for backward compatability check
+run("tar -czf images/mesa-checkBC.tar.gz --exclude '*_workspace' --transform 's,^./#{$ws}/sw-mesa,./#{out_name},' ./#{$ws}/sw-mesa")
+
+# Remove sw-mesa from mepa code before creating mepa-tar
+run("rm -rf #{$ws}/sw-mesa")
 $res.to_file("#{$ws}/status.json")
 run("tar -czf images/#{out_name}.tar.gz --exclude '*_workspace' --transform 's,^./#{$ws},./#{out_name},' ./#{$ws}")
 
@@ -471,7 +456,7 @@ $presets.each do |arch, c|
     next if arch != "arm64"
     next if not c[:release_artifact]
     run("mkdir -p images")
-    Dir["#{$ws}/bin/#{arch}/mesa/demo/*"].each do |e|
+    Dir["#{$ws}/bin/#{arch}/mepa_demo/*"].each do |e|
         next if File.directory?(e)
         ext = File.extname(e)
 

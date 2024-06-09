@@ -42,10 +42,10 @@ set(MESA_RPC ag/mesa-rpc.c)
 include_directories(ag)
 else()
 set(API_MEBA_CACHE_IN)
-list(APPEND API_MEBA_CACHE_IN meba/include/microchip/ethernet/board/api/types.h)
-list(APPEND API_MEBA_CACHE_IN meba/include/microchip/ethernet/board/api/phy.h)
-list(APPEND API_MEBA_CACHE_IN meba/include/microchip/ethernet/board/api/phy_macsec.h)
-list(APPEND API_MEBA_CACHE_IN meba/include/microchip/ethernet/board/api/phy_ts.h)
+list(APPEND API_MEBA_CACHE_IN board-configs/include/microchip/ethernet/board/api/types.h)
+list(APPEND API_MEBA_CACHE_IN board-configs/include/microchip/ethernet/board/api/phy.h)
+list(APPEND API_MEBA_CACHE_IN board-configs/include/microchip/ethernet/board/api/phy_macsec.h)
+list(APPEND API_MEBA_CACHE_IN board-configs/include/microchip/ethernet/board/api/phy_ts.h)
 list(APPEND API_MEBA_CACHE_IN mepa/include/microchip/ethernet/phy/api/types.h)
 list(APPEND API_MEBA_CACHE_IN mepa/include/microchip/ethernet/phy/api/phy.h)
 list(APPEND API_MEBA_CACHE_IN mepa/include/microchip/ethernet/phy/api/phy_macsec.h)
@@ -54,26 +54,27 @@ list(APPEND API_MEBA_CACHE_IN mepa/vtss/include/vtss_phy_types.h)
 list(APPEND API_MEBA_CACHE_IN mepa/vtss/include/vtss_phy_1g_api.h)
 list(APPEND API_MEBA_CACHE_IN mepa/vtss/include/vtss_phy_10g_api.h)
 set(API_MESA_CACHE_AG_IN)
-list (APPEND API_MESA_CACHE_AG_IN mesa/include/microchip/ethernet/switch/api.h)
-list (APPEND API_MESA_CACHE_AG_IN mesa/include/microchip/ethernet/switch/api/afi.h)
-list (APPEND API_MESA_CACHE_AG_IN mesa/include/microchip/ethernet/switch/api/capability.h)
-list (APPEND API_MESA_CACHE_AG_IN mesa/include/microchip/ethernet/switch/api/clock.h)
-list (APPEND API_MESA_CACHE_AG_IN mesa/include/microchip/ethernet/switch/api/init.h)
-list (APPEND API_MESA_CACHE_AG_IN mesa/include/microchip/ethernet/switch/api/l2.h)
-list (APPEND API_MESA_CACHE_AG_IN mesa/include/microchip/ethernet/switch/api/l3.h)
-list (APPEND API_MESA_CACHE_AG_IN mesa/include/microchip/ethernet/switch/api/misc.h)
-list (APPEND API_MESA_CACHE_AG_IN mesa/include/microchip/ethernet/switch/api/mrp.h)
-list (APPEND API_MESA_CACHE_AG_IN mesa/include/microchip/ethernet/switch/api/packet.h)
-list (APPEND API_MESA_CACHE_AG_IN mesa/include/microchip/ethernet/switch/api/port.h)
-list (APPEND API_MESA_CACHE_AG_IN mesa/include/microchip/ethernet/switch/api/qos.h)
-list (APPEND API_MESA_CACHE_AG_IN mesa/include/microchip/ethernet/switch/api/security.h)
-list (APPEND API_MESA_CACHE_AG_IN mesa/include/microchip/ethernet/switch/api/synce.h)
-list (APPEND API_MESA_CACHE_AG_IN mesa/include/microchip/ethernet/switch/api/ts.h)
-list (APPEND API_MESA_CACHE_AG_IN mesa/include/microchip/ethernet/switch/api/tsn.h)
-list (APPEND API_MESA_CACHE_AG_IN mesa/include/microchip/ethernet/switch/api/types.h)
-list (APPEND API_MESA_CACHE_AG_IN mesa/include/microchip/ethernet/switch/api/vop.h)
+list (APPEND API_MESA_CACHE_AG_IN sw-mesa/mesa/include/microchip/ethernet/switch/api.h)
+list (APPEND API_MESA_CACHE_AG_IN sw-mesa/me/include/microchip/ethernet/common.h)
+list (APPEND API_MESA_CACHE_AG_IN sw-mesa/mesa/include/microchip/ethernet/switch/api/afi.h)
+list (APPEND API_MESA_CACHE_AG_IN sw-mesa/mesa/include/microchip/ethernet/switch/api/capability.h)
+list (APPEND API_MESA_CACHE_AG_IN sw-mesa/mesa/include/microchip/ethernet/switch/api/clock.h)
+list (APPEND API_MESA_CACHE_AG_IN sw-mesa/mesa/include/microchip/ethernet/switch/api/init.h)
+list (APPEND API_MESA_CACHE_AG_IN sw-mesa/mesa/include/microchip/ethernet/switch/api/l2.h)
+list (APPEND API_MESA_CACHE_AG_IN sw-mesa/mesa/include/microchip/ethernet/switch/api/l3.h)
+list (APPEND API_MESA_CACHE_AG_IN sw-mesa/mesa/include/microchip/ethernet/switch/api/misc.h)
+list (APPEND API_MESA_CACHE_AG_IN sw-mesa/mesa/include/microchip/ethernet/switch/api/mrp.h)
+list (APPEND API_MESA_CACHE_AG_IN sw-mesa/mesa/include/microchip/ethernet/switch/api/packet.h)
+list (APPEND API_MESA_CACHE_AG_IN sw-mesa/mesa/include/microchip/ethernet/switch/api/port.h)
+list (APPEND API_MESA_CACHE_AG_IN sw-mesa/mesa/include/microchip/ethernet/switch/api/qos.h)
+list (APPEND API_MESA_CACHE_AG_IN sw-mesa/mesa/include/microchip/ethernet/switch/api/security.h)
+list (APPEND API_MESA_CACHE_AG_IN sw-mesa/mesa/include/microchip/ethernet/switch/api/synce.h)
+list (APPEND API_MESA_CACHE_AG_IN sw-mesa/mesa/include/microchip/ethernet/switch/api/ts.h)
+list (APPEND API_MESA_CACHE_AG_IN sw-mesa/mesa/include/microchip/ethernet/switch/api/tsn.h)
+list (APPEND API_MESA_CACHE_AG_IN sw-mesa/mesa/include/microchip/ethernet/switch/api/types.h)
+list (APPEND API_MESA_CACHE_AG_IN sw-mesa/mesa/include/microchip/ethernet/switch/api/vop.h)
 add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/mesa-ag/mesa-rpc.h ${CMAKE_CURRENT_BINARY_DIR}/mesa-ag/mesa-rpc.c
-                   COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../../mesa/scripts/ag2.rb -b ${CMAKE_CURRENT_SOURCE_DIR}/../.. -o ${CMAKE_CURRENT_BINARY_DIR}/mesa-ag ${API_MESA_CACHE_AG_IN} ${API_MEBA_CACHE_IN} ${API_ME_CACHE_IN}
+                   COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/ag2.rb -b ${CMAKE_CURRENT_SOURCE_DIR}/.. -o ${CMAKE_CURRENT_BINARY_DIR}/mesa-ag ${API_MESA_CACHE_AG_IN} ${API_MEBA_CACHE_IN} 
                    DEPENDS mesa_cache
                    COMMENT "Generate mesa-rpc.h/mesa-rpc.c")
 add_custom_target(mesa_rpc_src DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/mesa-ag/mesa-rpc.h ${CMAKE_CURRENT_BINARY_DIR}/mesa-ag/mesa-rpc.c)
@@ -89,16 +90,10 @@ file(GLOB_RECURSE MEPA_APP_SRC
      #RELATIVE ""
      "${CMAKE_CURRENT_SOURCE_DIR}/mepa_apps/*.c")
 
-if (CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
-    add_library(mesa_demo_lib_edsx STATIC test_mcu_fw.c)
-    target_compile_options(mesa_demo_lib_edsx PUBLIC -DMEPA_DEMO_OTP=1)
-    target_include_directories(mesa_demo_lib_edsx PUBLIC ${CMAKE_BINARY_DIR}/mesa-ag/)
-endif()
-
-add_library(mesa_demo_lib STATIC trace.c cli.c port.c mac.c vlan.c packet.c ip.c
-                                 debug.c symreg.c test.c spi.c uio.c test_mcu_fw.c ${MESA_RPC} json_rpc.c
+add_library(mepa_demo_lib STATIC trace.c cli.c port.c mac.c vlan.c packet.c ip.c
+                                 debug.c symreg.c test.c spi.c uio.c ${MESA_RPC} json_rpc.c
                                  example.c kr.c intr.c  ${MEPA_APP_SRC})
-target_include_directories(mesa_demo_lib PUBLIC ${CMAKE_BINARY_DIR}/mesa-ag/)
+target_include_directories(mepa_demo_lib PUBLIC ${CMAKE_BINARY_DIR}/mesa-ag/)
 
 file(GLOB_RECURSE EXAMPLE_SRC
      LIST_DIRECTORIES false
@@ -112,9 +107,9 @@ file(GLOB_RECURSE EXAMPLE_SRC_MEPA
      #RELATIVE ""
      "${CMAKE_CURRENT_SOURCE_DIR}/../../mepa/demo/examples/*.c")
 
-add_library(mesa_demo_examples_lib INTERFACE)
-target_sources(mesa_demo_examples_lib INTERFACE ${EXAMPLE_SRC} ${EXAMPLE_SRC_MEPA})
-#target_include_directories(mesa_demo_examples_lib PUBLIC ${CMAKE_BINARY_DIR}/mesa-ag/)
+add_library(mepa_demo_examples_lib INTERFACE)
+target_sources(mepa_demo_examples_lib INTERFACE ${EXAMPLE_SRC} ${EXAMPLE_SRC_MEPA})
+#target_include_directories(mepa_demo_examples_lib PUBLIC ${CMAKE_BINARY_DIR}/mesa-ag/)
 
 macro(APP_TARGET)
     set(options )
@@ -151,8 +146,8 @@ macro(APP_TARGET)
      endif()
      else()
             target_link_libraries(${A_NAME}
-                mesa_demo_lib
-                mesa_demo_examples_lib
+                mepa_demo_lib
+                mepa_demo_examples_lib
                 json-c
                 ${A_MESA}
                 ${A_MEBA}_static
