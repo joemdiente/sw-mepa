@@ -14,28 +14,6 @@ PHY architecture name conversion table:
 * LAN8814   <=> LAN8814
 * Others    <=> VSC8484, VSC8486
 
-Third party software
-====================
-
-Aquantia Firmware and API:
-    API version:    2.6.1
-    Firmware version:
-        GEN2:
-            AQR407:     3.3.9
-            AQR409:     3.3.9
-        GEN3:
-            AQR411_A0:  4.0.4
-            AQR411C_A0: 4.0.4
-            AQR411_B0:  4.2.3
-            AQR412_A0:  4.0.4
-            AQR412C_A0: 4.0.4
-            AQR412_B0:  4.2.3
-    Aquantia documentation will be delivered by Marvell Technology, Inc.
-
-Intel driver for GPY211 version 2.7.1.
-Intel documentation will be delivered by MaxLinear.
-
-
 General
 =======
 
