@@ -41,6 +41,7 @@ static mscc_appl_trace_group_t trace_groups[TRACE_GROUP_CNT] = {
 static mesa_bool_t cli_exit;
 static mesa_bool_t cli_mgmt_port_include;
 static uint32_t cli_port_cnt;
+static mesa_bool_t cli_macsec_commands = 0;
 
 /****************************************************************************/
 /*  Command parsing                                                         */
@@ -64,6 +65,7 @@ mesa_port_no_t uport2iport(mesa_port_no_t uport)
 }
 
 static cli_cmd_t *cli_cmd_list;
+static cli_cmd_t *cli_macsec_cmd_list;
 
 static void cli_cmd_help(cli_req_t *req)
 {
@@ -449,6 +451,18 @@ void mscc_appl_cli_cmd_reg(cli_cmd_t *cmd)
     }
 }
 
+void mscc_appl_macsec_cli_cmd_reg(cli_cmd_t *cmd)
+{
+
+    if (!cmd->func && !cmd->func2) {
+        cli_printf("Missing command function: %s\n", cmd->syntax);
+        return;
+    }
+
+    cmd->next = cli_macsec_cmd_list;
+    cli_macsec_cmd_list = cmd;
+}
+
 /* Register CLI parameter */
 void mscc_appl_cli_parm_reg(cli_parm_t *parm)
 {
@@ -564,7 +578,7 @@ char *cli_mac_txt(const uint8_t *mac, char *buf)
 }
 
 /* Build array of command/syntax words */
-static void cli_build_words(char *str, int *count, char **words, mesa_bool_t lower)
+void cli_build_words(char *str, int *count, char **words, mesa_bool_t lower)
 {
     int  i, j, len;
     char *p;
@@ -595,7 +609,7 @@ static int cli_parse_command(int argc, const char **argv)
     char        *stx;
     char        stx_buf[MAX_CMD_LEN], *stx_words[64];
     int         i = 0, i_cmd = 0, i_stx, i_parm = 0, stx_count, max, len, j, error;
-    cli_cmd_t   *cli_cmd, *match_list = NULL, *match_prev = NULL;
+    cli_cmd_t   *cli_cmd,*cmd_list, *match_list = NULL, *match_prev = NULL;
     mesa_bool_t match, help = 0;
     cli_req_t   *req;
     cli_parm_t  *parm;
@@ -609,8 +623,22 @@ static int cli_parse_command(int argc, const char **argv)
         }
     }
 
+    if(argc == 1) {
+       if(strcmp(argv[argc - 1], "exit_macsec") == 0) {
+            printf("\n ........... MACsec Demo Ended .............. \n");
+            cli_macsec_commands = 0;
+            return -1;
+       }
+    }
+
+    if(cli_macsec_commands) {
+        cmd_list = cli_macsec_cmd_list;
+    } else {
+        cmd_list = cli_cmd_list;
+    }
+
     /* Compare entered command with each entry in CLI command table */
-    for (cli_cmd = cli_cmd_list; cli_cmd != NULL; cli_cmd = cli_cmd->next) {
+    for (cli_cmd = cmd_list; cli_cmd != NULL; cli_cmd = cli_cmd->next) {
 
         /* Command too long */
         if (strlen(cli_cmd->syntax) > MAX_CMD_LEN)
@@ -831,6 +859,12 @@ static int cli_parse_command(int argc, const char **argv)
 
             /* Handle CLI command */
             if (cli_cmd->func) {
+                if(argc == 1) {
+                    if(strcmp(argv[argc - 1], "macsec") == 0) {
+                        cli_macsec_commands = 1;
+                    }
+                }
+
                 cli_cmd->func(req);
                 return req->rc; // TODO - return value
             } else {

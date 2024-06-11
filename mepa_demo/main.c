@@ -993,6 +993,7 @@ static void init_modules(mscc_appl_init_t *init)
     mscc_appl_phy_init(init);
     mscc_appl_kat_demo(init);
     mscc_appl_mcu_fw_init(init);
+    mepa_demo_appl_macsec_demo(init);
 }
 
 typedef struct {
