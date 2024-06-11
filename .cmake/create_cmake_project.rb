@@ -80,7 +80,8 @@ if c[:brsdk]
     if not File.exist? brsdk_base
         if File.exist? "/usr/local/bin/mscc-install-pkg"
             if c[:brsdk_branch]
-                run "sudo /usr/local/bin/mscc-install-pkg -t brsdk/#{c[:brsdk]}-#{c[:brsdk_branch]} #{brsdk_name};"
+               # run "sudo /usr/local/bin/mscc-install-pkg -t brsdk/#{c[:brsdk]}-#{c[:brsdk_branch]} #{brsdk_name};"
+                run "sudo /usr/local/bin/mscc-install-pkg -t brsdk/#{c[:brsdk]} #{brsdk_name};"
             else
                 run "sudo /usr/local/bin/mscc-install-pkg -t brsdk/#{c[:brsdk]} #{brsdk_name};"
             end

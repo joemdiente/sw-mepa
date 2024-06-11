@@ -176,7 +176,8 @@ def compile(ws, odir, preset, c)
         dw_file = "mscc-brsdk-#{arch}-#{c[:brsdk]}"
         dw_file += "-#{c[:brsdk_branch]}" if c[:brsdk_branch] and c[:brsdk_branch] != "brsdk"
         if c[:brsdk_branch]
-            bcmd += "sudo /usr/local/bin/mscc-install-pkg -t brsdk/#{c[:brsdk]}-#{c[:brsdk_branch]} #{dw_file}; "
+            #bcmd += "sudo /usr/local/bin/mscc-install-pkg -t brsdk/#{c[:brsdk]}-#{c[:brsdk_branch]} #{dw_file}; "
+            bcmd += "sudo /usr/local/bin/mscc-install-pkg -t brsdk/#{c[:brsdk]} #{dw_file}; "
         else
             bcmd += "sudo /usr/local/bin/mscc-install-pkg -t brsdk/#{c[:brsdk]} #{dw_file}; "
         end
@@ -345,7 +346,8 @@ $presets.each do |preset, c|
 
     if c[:brsdk]
         if c[:brsdk_branch]
-            run "sudo /usr/local/bin/mscc-install-pkg -t brsdk/#{c[:brsdk]}-#{c[:brsdk_branch]} #{dw_file};"
+            #run "sudo /usr/local/bin/mscc-install-pkg -t brsdk/#{c[:brsdk]}-#{c[:brsdk_branch]} #{dw_file};"
+            run "sudo /usr/local/bin/mscc-install-pkg -t brsdk/#{c[:brsdk]} #{dw_file};"
         else
             run "sudo /usr/local/bin/mscc-install-pkg -t brsdk/#{c[:brsdk]} #{dw_file};"
         end

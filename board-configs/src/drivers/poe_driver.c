@@ -2554,7 +2554,7 @@ static mesa_bool_t is_firmware_version_identical(const meba_poe_ctrl_inst_t* con
 
     VTSS_MSLEEP(500);
 
-    uint8_t buf_rx[PD_BUFFER_SIZE];
+    uint8_t buf_rx[PD_BUFFER_SIZE] = {0};
     mesa_bool_t                     ePOE_BOOL_Is_system_status = false;
     Telemetry_at_Boot_Up_Error_e    eTelemetry_at_boot_up_error = eBoot_Unknown_error;
 
@@ -3100,7 +3100,7 @@ static mesa_rc meba_poe_pd69200_firmware_upgrade(const meba_poe_ctrl_inst_t* con
     VTSS_MSLEEP(10000);
     DEBUG(inst, MEBA_TRACE_LVL_DEBUG, "Download succeeded");
 
-    uint8_t buf_rx[PD_BUFFER_SIZE];
+    uint8_t buf_rx[PD_BUFFER_SIZE] = {0};
     mesa_bool_t                     ePOE_BOOL_Is_system_status = false;
     Telemetry_at_Boot_Up_Error_e    eTelemetry_at_boot_up_error = eBoot_Unknown_error;
 
@@ -3331,7 +3331,7 @@ mesa_rc meba_poe_ctrl_pd69200_prebt_port_cfg_set(
 mesa_rc meba_poe_ctrl_pd69200_do_reset(
     const meba_poe_ctrl_inst_t* const inst)
 {
-    uint8_t buf_rx[PD_BUFFER_SIZE];
+    uint8_t buf_rx[PD_BUFFER_SIZE] = {0};
     mesa_bool_t                     bIs_poe_system_status = false;
     Telemetry_at_Boot_Up_Error_e    eTelemetry_at_boot_up_error = eBoot_Unknown_error;
 
@@ -3694,7 +3694,7 @@ mesa_rc meba_poe_ctrl_pd69200_do_detection(
     DEBUG(inst, MEBA_TRACE_LVL_DEBUG, "%s(%s)", __FUNCTION__, inst->adapter_name);
     meba_poe_pd69200_set_chipset(inst, MEBA_POE_NO_CHIPSET_FOUND);
     
-    uint8_t buf_rx[PD_BUFFER_SIZE];
+    uint8_t buf_rx[PD_BUFFER_SIZE] = {0};
     mesa_bool_t                     ePOE_BOOL_Is_system_status = false;
     Telemetry_at_Boot_Up_Error_e    eTelemetry_at_boot_up_error = eBoot_Unknown_error;
 
