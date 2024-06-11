@@ -456,8 +456,9 @@ typedef struct {
 
 /** \brief mepa trace groups */
 typedef enum {
-    MEPA_TRACE_GRP_GEN,   /**< PHY general features */
-    MEPA_TRACE_GRP_TS,    /**< Timestamp Api */
+    MEPA_TRACE_GRP_GEN,    /**< PHY general features */
+    MEPA_TRACE_GRP_TS,     /**< Timestamp Api */
+    MEPA_TRACE_GRP_MACSEC, /**< MACsec API */
 } mepa_trace_group_t;
 
 typedef struct {
@@ -552,7 +553,7 @@ typedef enum {
     MEPA_PRBS7, /**< PRBS mode 7 */
     MEPA_PRBS15,/**< PRBS mode 15 */
     MEPA_PRBS31,/**< PRBS mode 31 */
-}mepa_prbs_pattern_t;
+} mepa_prbs_pattern_t;
 
 /** \brief PRBS clock */
 typedef enum {
