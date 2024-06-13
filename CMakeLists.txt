@@ -10,14 +10,14 @@ include(.cmake/common.cmake)
 
 option(BUILD_ALL         "Enable all" OFF)
 option(BUILD_STATIC_LIBS "Build static versions of the libraries" ON)
-#option(BUILD_SHARED_LIBS "Build shared versions of the libraries" ON)
-#option(BUILD_MESA_ALL    "Build the MESA libraries" OFF)
+option(BUILD_SHARED_LIBS "Build shared versions of the libraries" ON)
+option(BUILD_MESA_ALL    "Build the MESA libraries" OFF)
 option(BUILD_DOXYGEN     "Build doxygen" OFF)
 option(MESA_PRE_AG       "Use pre-generated mesa-ag layer if exist" ON)
 option(BUILD_MEPA_DEMO   "Build the MEPA demo" ON)
 option(MESA_OPSYS_LINUX  "Build the MESA for Linux" ON)
 option(MESA_OPSYS_VELOCITYSP "Build the MESA for VelocitySP" OFF)
-#option(MESA_WRAP         "Generate and build the MESA Wrapper" ON)
+option(MESA_WRAP         "Generate and build the MESA Wrapper" ON)
 
 mark_as_advanced(BUILD_MEPA_DEMO MESA_PRE_AG BUILD_DOXYGEN)
 
