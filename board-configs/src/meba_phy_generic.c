@@ -114,6 +114,7 @@ void phy_25g_slot1_scan(meba_inst_t inst, mepa_port_no_t port_no, meba_port_entr
             entry->map.miim_controller = MESA_MIIM_CONTROLLER_0;
             entry->cap = (MEBA_PORT_CAP_VTSS_10G_PHY | MEBA_PORT_CAP_10G_FDX | MEBA_PORT_CAP_FLOW_CTRL | MEBA_PORT_CAP_1G_FDX);
             entry->map.miim_addr       =  slot1_map[port_no - 12];
+            entry->phy_base_port       = 12;
         } 
         else {
             mesa_miim_read(0, entry->map.chip_no, 0, slot1_map_viper[port_no - 12], 2, &reg2);
@@ -127,6 +128,7 @@ void phy_25g_slot1_scan(meba_inst_t inst, mepa_port_no_t port_no, meba_port_entr
                                     MEBA_PORT_CAP_DUAL_FIBER_1000X | MEBA_PORT_CAP_10M_HDX | MEBA_PORT_CAP_10M_FDX |
                                     MEBA_PORT_CAP_100M_HDX | MEBA_PORT_CAP_100M_FDX );
                 entry->map.miim_addr       =  slot1_map_viper[port_no - 12];
+                entry->phy_base_port       = 12;
             }
         }
     }
@@ -151,6 +153,7 @@ void phy_25g_slot2_scan(meba_inst_t inst, mepa_port_no_t port_no, meba_port_entr
         entry->mac_if              = MESA_PORT_INTERFACE_SFI;
         entry->map.miim_controller = MESA_MIIM_CONTROLLER_0;
         entry->cap = (MEBA_PORT_CAP_VTSS_10G_PHY | MEBA_PORT_CAP_10G_FDX | MEBA_PORT_CAP_FLOW_CTRL | MEBA_PORT_CAP_1G_FDX);
+        entry->phy_base_port = 16;
     }
     T_I(inst, "port(%d):  %x\n",port_no, phy_id?phy_id:spi_phy_id);
 
@@ -177,6 +180,7 @@ void meba_phy_driver_init(meba_inst_t inst)
     mepa_rc             rc;
     mesa_port_no_t      port_no;
     meba_port_entry_t   entry;
+    mepa_device_t       *phy_dev;
 
     inst->phy_device_ctx = calloc(inst->phy_device_cnt, sizeof(mepa_callout_ctx_t));
     inst->spi_mepa_callout = calloc(inst->phy_device_cnt, sizeof(mepa_callout_t));
@@ -240,6 +244,17 @@ void meba_phy_driver_init(meba_inst_t inst)
             if(port_no > 15 && port_no < 20) {
                meba_phy_config(inst, board_conf.vtss_instance_ptr, port_no);
             }
+        }
+    }
+
+    // Enable accessing the shared resources by linking the base port on each port
+    for (port_no = 0; port_no < inst->phy_device_cnt; port_no++) {
+        inst->api.meba_port_entry_get(inst, port_no, &entry);
+        phy_dev = inst->phy_devices[port_no];
+        if (phy_dev && inst->phy_devices[entry.phy_base_port]) {
+            (void)mepa_link_base_port(phy_dev,
+                                      inst->phy_devices[entry.phy_base_port],
+                                      entry.map.chip_port);
         }
     }
 
