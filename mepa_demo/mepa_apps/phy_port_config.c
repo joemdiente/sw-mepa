@@ -89,9 +89,13 @@ static int mepa_drv_create(const mepa_port_no_t port_no) {
     }
 
     mepa_reset_param_t phy_reset = {};
-    phy_reset.reset_point = MEPA_RESET_POINT_DEFAULT;
     phy_reset.media_intf = MESA_PHY_MEDIA_IF_CU;
-    (mepa_reset(meba_phy_inst->phy_devices[port_no], &phy_reset));
+    phy_reset.reset_point = MEPA_RESET_POINT_PRE;
+    mepa_reset(meba_phy_inst->phy_devices[port_no], &phy_reset);
+
+    phy_reset.reset_point = MEPA_RESET_POINT_DEFAULT;
+    phy_reset.media_intf  = MESA_PHY_MEDIA_IF_FI_10G_LAN;
+    mepa_reset(meba_phy_inst->phy_devices[port_no], &phy_reset);
     meba_phy_info_get(meba_phy_inst, port_no, &phy_info);
     cli_printf("Dev created for port_no %d , id is dec:(%d) : hex(%x)\n", port_no, phy_info.part_number, phy_info.part_number);
     return MESA_RC_OK;

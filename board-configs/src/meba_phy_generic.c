@@ -8,6 +8,8 @@
 #include "meba_aux.h"
 #include "meba_generic.h"
 
+uint32_t phy_type[20] = {0}; /* PHY Connected on ports */
+
 mepa_rc meba_mmd_read(struct mepa_callout_ctx           *ctx,
                       const uint8_t                      mmd,
                       const uint16_t                     addr,
@@ -63,18 +65,20 @@ void mem_free(struct mepa_callout_ctx *ctx, void *ptr)
 }
 
 static void meba_phy_config(meba_inst_t inst, const vtss_inst_t vtss_instance, mepa_port_no_t port_no) {
-    mepa_phy_info_t info;
+    if(phy_type[port_no] == 0x8258) {
+        if(port_no > 11 && port_no < 16)
+            m10g_mode_conf(vtss_instance, port_no, 15);
+         if(port_no > 15 && port_no < 20)
+            m10g_mode_conf(vtss_instance, port_no, 19);
+    }
     mepa_reset_param_t phy_reset = {};
     phy_reset.media_intf = MESA_PHY_MEDIA_IF_CU;
-    (meba_phy_reset(inst, port_no, &phy_reset));
-    if(meba_phy_info_get(inst, port_no, &info) == MESA_RC_OK) {
-       if(info.part_number == 0x8258) { /* expand based on the PHY */
-            if(port_no > 11 && port_no < 16)
-                m10g_mode_conf(vtss_instance, port_no, 15);
-            if(port_no > 15 && port_no < 20)
-                m10g_mode_conf(vtss_instance, port_no, 19);
-        }
-     }
+    phy_reset.reset_point = MEPA_RESET_POINT_PRE;
+    meba_phy_reset(inst, port_no, &phy_reset);
+
+    phy_reset.reset_point = MEPA_RESET_POINT_DEFAULT;
+    phy_reset.media_intf  = MESA_PHY_MEDIA_IF_FI_10G_LAN;
+    meba_phy_reset(inst, port_no, &phy_reset);
 }
 
 uint16_t slot1_map[] = {0x1b, 0x1a, 0x19, 0x18};
@@ -94,68 +98,65 @@ uint16_t slot2_map[] = {0x1f, 0x1e, 0x1d, 0x1c};
   details */
 void phy_25g_slot1_scan(meba_inst_t inst, mepa_port_no_t port_no, meba_port_entry_t *entry) {
     /* seperate API support needed for slot 2 SPI as of now only spi1 taken */
-  
-    uint32_t spi_phy_id,model= 0;
-    uint16_t phy_id = 0, reg2 = 0, reg3 = 0;
+    uint32_t phy_id = 0; 
+    uint32_t model= 0;
+    uint16_t reg2 = 0, reg3 = 0;
     if(inst->iface.mepa_spi_slot1_reg_read != NULL) {
-        inst->iface.mepa_spi_slot1_reg_read(NULL, port_no, 0x1e, 0, &spi_phy_id);
+        inst->iface.mepa_spi_slot1_reg_read(NULL, port_no, 0x1e, 0, &phy_id);
+        phy_type[port_no] = phy_id & 0xFFFF;
     }
     else {
-        mesa_mmd_read(0, entry->map.chip_no, 0, slot1_map[port_no - 12], 0x1e, 0, &phy_id);
-        if (phy_id == 0x8258  || spi_phy_id == 0x8258 || phy_id == 0x8040 || spi_phy_id == 0x8040 || \
-				phy_id == 0x8042 || spi_phy_id == 0x8042 || \
-				phy_id == 0x8021 || spi_phy_id == 0x8021 || \
-				phy_id == 0x8022 || spi_phy_id == 0x8022 || \
-				phy_id == 0x8041 || spi_phy_id == 0x8041 || \
-				phy_id == 0x8043 || spi_phy_id == 0x8043 || \
-				phy_id == 0x8044 || spi_phy_id == 0x8044 \
-		) { /* expansion needed for Malibu 10G and other PHYs */
-            entry->mac_if              = MESA_PORT_INTERFACE_SFI;
+        mesa_mmd_read(0, entry->map.chip_no, 0, slot1_map[port_no - 12], 0x1e, 0, (uint16_t*)&phy_id);
+        entry->map.miim_addr       =  slot1_map[port_no - 12];
+        phy_type[port_no] = phy_id;
+    }
+    if (phy_id == 0x8258) {
+        /* expansion needed for Malibu 10G and other PHYs */
+        entry->mac_if              = MESA_PORT_INTERFACE_SFI;
+        entry->map.miim_controller = MESA_MIIM_CONTROLLER_0;
+        entry->cap = (MEBA_PORT_CAP_VTSS_10G_PHY | MEBA_PORT_CAP_10G_FDX | MEBA_PORT_CAP_FLOW_CTRL | MEBA_PORT_CAP_1G_FDX);
+        entry->phy_base_port       = 12;
+    } 
+    else {
+        mesa_miim_read(0, entry->map.chip_no, 0, slot1_map_viper[port_no - 12], 2, &reg2);
+        mesa_miim_read(0, entry->map.chip_no, 0, slot1_map_viper[port_no - 12], 3, &reg3);
+        phy_id = (((uint32_t)reg2) << 16) | reg3;
+        model = ((phy_id & 0xffff0)>> 4);
+        phy_type[port_no] = model;
+        if ((model == 0x707c) || (model == 0x707b) || (model == 0x707d)) {
+            entry->mac_if              = MESA_PORT_INTERFACE_QSGMII;
             entry->map.miim_controller = MESA_MIIM_CONTROLLER_0;
-            entry->cap = (MEBA_PORT_CAP_VTSS_10G_PHY | MEBA_PORT_CAP_10G_FDX | MEBA_PORT_CAP_FLOW_CTRL | MEBA_PORT_CAP_1G_FDX);
-            entry->map.miim_addr       =  slot1_map[port_no - 12];
-            entry->phy_base_port       = 12;
-        } 
-        else {
-            mesa_miim_read(0, entry->map.chip_no, 0, slot1_map_viper[port_no - 12], 2, &reg2);
-            mesa_miim_read(0, entry->map.chip_no, 0, slot1_map_viper[port_no - 12], 3, &reg3);
-            spi_phy_id = (((uint32_t)reg2) << 16) | reg3;
-            model = ((spi_phy_id & 0xffff0)>> 4);
-            if ((model == 0x707c) || (model == 0x707b) || (model == 0x707d)) {
-                entry->mac_if              = MESA_PORT_INTERFACE_QSGMII;
-                entry->map.miim_controller = MESA_MIIM_CONTROLLER_0;
-                entry->cap = (MEBA_PORT_CAP_1G_PHY | MEBA_PORT_CAP_1G_FDX | MEBA_PORT_CAP_FLOW_CTRL | MEBA_PORT_CAP_SFP_DETECT | MEBA_PORT_CAP_SFP_1G |
+            entry->cap = (MEBA_PORT_CAP_1G_PHY | MEBA_PORT_CAP_1G_FDX | MEBA_PORT_CAP_FLOW_CTRL | MEBA_PORT_CAP_SFP_DETECT | MEBA_PORT_CAP_SFP_1G |
                                     MEBA_PORT_CAP_DUAL_FIBER_1000X | MEBA_PORT_CAP_10M_HDX | MEBA_PORT_CAP_10M_FDX |
                                     MEBA_PORT_CAP_100M_HDX | MEBA_PORT_CAP_100M_FDX );
-                entry->map.miim_addr       =  slot1_map_viper[port_no - 12];
-                entry->phy_base_port       = 12;
-            }
+            entry->map.miim_addr       =  slot1_map_viper[port_no - 12];
+            entry->phy_base_port       = 12;
         }
     }
 
-    T_I(inst, "port(%d):  %x\n",port_no, (phy_id)?phy_id:spi_phy_id);
+    T_I(inst, "port(%d):  %x\n",port_no, phy_id & 0xFFFF);
  
 }
 
 void phy_25g_slot2_scan(meba_inst_t inst, mepa_port_no_t port_no, meba_port_entry_t *entry) {
     /* seperate API support needed for slot 2 SPI as of now only spi1 taken */
-
-    uint16_t phy_id;
-    uint32_t spi_phy_id;
+    uint32_t phy_id = 0;
     if(inst->iface.mepa_spi_slot2_reg_read != NULL) {
-        inst->iface.mepa_spi_slot2_reg_read(NULL, port_no, 0x1e, 0, &spi_phy_id);
+        inst->iface.mepa_spi_slot2_reg_read(NULL, port_no, 0x1e, 0, &phy_id);
+        phy_type[port_no] = phy_id & 0xFFFF;
     }
     else {
-        mesa_mmd_read(0, entry->map.chip_no, 0, slot2_map[port_no - 16], 0x1e, 0, &phy_id);
+        mesa_mmd_read(0, entry->map.chip_no, 0, slot2_map[port_no - 16], 0x1e, 0, (uint16_t*)&phy_id);
+        phy_type[port_no] = phy_id;
         entry->map.miim_addr       =  slot2_map[port_no - 16];
     }
-    if (phy_id == 0x8258 || spi_phy_id == 0x8258) { /* expansion needed for Malibu 10G and other PHYs */
+    if (phy_id == 0x8258) { /* expansion needed for Malibu 10G and other PHYs */
         entry->mac_if              = MESA_PORT_INTERFACE_SFI;
         entry->map.miim_controller = MESA_MIIM_CONTROLLER_0;
         entry->cap = (MEBA_PORT_CAP_VTSS_10G_PHY | MEBA_PORT_CAP_10G_FDX | MEBA_PORT_CAP_FLOW_CTRL | MEBA_PORT_CAP_1G_FDX);
         entry->phy_base_port = 16;
     }
-    T_I(inst, "port(%d):  %x\n",port_no, phy_id?phy_id:spi_phy_id);
+    T_I(inst, "port(%d):  %x\n",port_no, phy_id & 0xFFFF);
 
 }
 
