@@ -167,6 +167,19 @@ const char *cli_parse_find(const char *cmd, const char *stx)
     return found;
 }
 
+int cli_parm_u64(cli_req_t *req, uint64_t *val, uint64_t min, uint64_t max)
+{
+    uint64_t n;
+    char *end;
+
+    n = strtoul(req->cmd, &end, 0);
+    if (*end != '\0' || n < min || n > max)
+        return 1;
+
+    *val = n;
+    return 0;
+}
+
 int cli_parm_u32(cli_req_t *req, uint32_t *val, uint32_t min, uint32_t max)
 {
     uint32_t  n;

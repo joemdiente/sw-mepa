@@ -40,7 +40,20 @@
 #define KEYWORD_VLANID          "vlanid"
 #define KEYWORD_VIDINNER        "vid-inner"
 
-#define MAC_ADDRESS_LEN    17 /* Length of MAC address string in formate "00-00-00-00-00-00" */
+/* Secure Channel Keywords */
+#define KEYWORD_SC_ID           "sc-id"
+#define KEYWORD_AN              "an"
+#define KEYWORD_NEXT_PN         "next-pn"
+#define KEYWORD_CONF            "conf"
+#define KEYWORD_LOW_PN          "lowest-pn"
+
+/* MACsec Statistics keywords */
+#define KEYWORD_GET             "get"
+#define KEYWORD_CLEAR           "clear"
+#define KEYWORD_HMAC            "hmac"
+#define KEYWORD_LMAC            "lmac"
+
+#define MAC_ADDRESS_LEN    17 /* Length of MAC address string in formate "XX-XX-XX-XX-XX-XX" */
 
 typedef struct {
     mepa_bool_t     etype_parsed;         /* Ethertype Keyword Parsed */
@@ -49,6 +62,11 @@ typedef struct {
     mepa_bool_t     match_parsed;         /* Match Keyword Parsed */
     mepa_bool_t     vlan_id_parsed;       /* Vlan id Keyword Parsed */
     mepa_bool_t     vlan_inner_id_parsed; /* Inner Vlan id keyword Parsed */
+    mepa_bool_t     rx_sc_id_parsed;      /* Receive Secure Channel identifier Parsed */
+    mepa_bool_t     next_pn_parsed;       /* Next packet number keyword Parsed */
+    mepa_bool_t     an_parsed;            /* Association Number Keyword parsed */
+    mepa_bool_t     conf_parsed;          /* Confidentiality Keyword Parsed */
+    mepa_bool_t     lowest_pn_parsed;     /* Lowest Packet Number for RX keyword Parsed */
 } keyword_parsed;
 
 /* Stroring the required Parameters for the Application in structure */
@@ -76,6 +94,13 @@ typedef struct {
     uint16_t                    vid;                  /* Pattern Match VLAN ID */
     uint16_t                    vid_inner;            /* Pattern Match Inner VLAN ID */
     uint16_t                    pattern_match;        /* Parameter to be matched */
+    uint16_t                    an_no;                /* Association Number for SA */
+    uint16_t                    rx_sc_id;             /* Receive Secure Channel identifier */
+    uint64_t                    next_pn;              /* Next Packet number */
+    uint64_t                    lowest_pn;            /* Lowest Packet number */
+    uint64_t                    seq_threshold_value;  /* Sequence Threshold packet Number */
     mepa_bool_t                 conf;                 /* Confidentiality Enable */
+    mepa_bool_t                 statistics_get;       /* MACsec Statistics Get or Clear */
+    mepa_bool_t                 hmac_counters;        /* HMAC counters or LMAC Counters */
 } macsec_configuration;
 

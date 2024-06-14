@@ -55,7 +55,6 @@ static void cli_cmd_match_param(cli_req_t *req);
  * \command : "pattern_conf"
  */
 static void cli_cmd_match_conf(cli_req_t *req);
-
 /**
  * \brief   : Start MACsec Application
  * \command : "macsec"
@@ -84,6 +83,22 @@ static mscc_appl_trace_group_t trace_groups[10] = {
 #define TXT_NOT_APP  3
 #define TXT_NOT_TRIG 4
 #define TXT_TRIG     5
+
+#define MAX_STRING_LEN   200       /* Max length of string in File */
+#define MAX_WORD_COUNT   1000      /* Max word count in File */
+#define MAX_KEY_LEN      32        /* SAK key length */
+#define MAX_HASK_KEY_LEN 16        /* SAK Hash key length */
+#define MAX_SALT_KEY_LEN 12        /* SAK Salt length for XPN */
+#define XPN_SSCI_LEN     4         /* Short Secure Channel Identifier length for XPN */
+
+#define MASK_16BIT       0xFFFF                 /* 16 Bit Mask value */
+#define MASK_32BIT       0xFFFFFFFF             /* 32 Bit Mask value */
+#define MASK_64BIT       0xFFFFFFFFFFFFFFFF     /* 64 Bit mask value */
+FILE *fptr;
+uint8_t key[MAX_KEY_LEN]         = {0};
+uint8_t h_key[MAX_HASK_KEY_LEN]  = {0};
+uint8_t salt[MAX_SALT_KEY_LEN]   = {0};
+uint8_t ssci_xpn[XPN_SSCI_LEN]   = {0};
 
 /* Structure objects to know the keyword parsed and to store the pattern values */
 keyword_parsed keyword;
@@ -403,6 +418,691 @@ static void cli_cmd_match_conf(cli_req_t *req)
     return;
 }
 
+static void cli_cmd_tx_sc_create(cli_req_t *req)
+{
+    mepa_rc rc;
+    macsec_configuration *mreq = req->module_req;
+    mepa_macsec_port_t  macsec_port;
+    macsec_port.port_no    = req->port_no;
+    macsec_port.service_id = 0;
+    macsec_port.port_id    = mreq->port_id;
+
+    if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
+        printf(" Dev is Not Created for the port : %d\n", req->port_no);
+        return;
+    }
+
+    /* Tx Secure channel Creation */
+    if((rc = mepa_macsec_tx_sc_set(meba_macsec_instance->phy_devices[req->port_no], macsec_port)) != MEPA_RC_OK) {
+        T_E("\n Error in creating Transmit Secure channel on port : %d\n", req->port_no);
+        return;
+    }
+    cli_printf("\n...... Transmit Secure Channel Created on port %d for SecY with is :%d......\n",req->port_no, mreq->port_id);
+    return;
+}
+
+static void cli_cmd_macsec_tx_sc_del(cli_req_t *req)
+{
+    mepa_rc rc;
+    macsec_configuration *mreq = req->module_req;
+    mepa_macsec_port_t  macsec_port;
+    macsec_port.port_no    = req->port_no;
+    macsec_port.service_id = 0;
+    macsec_port.port_id    = mreq->port_id;
+    if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
+        printf(" Dev is Not Created for the port : %d\n", req->port_no);
+        return;
+    }
+
+    /* Tx Secure channel Creation */
+    if((rc = mepa_macsec_tx_sc_del(meba_macsec_instance->phy_devices[req->port_no], macsec_port)) != MEPA_RC_OK) {
+        T_E("\n Error in deleting Transmit Secure channel on port : %d\n", req->port_no);
+        return;
+    }
+    cli_printf("\n ...... Transmit Secure Channel Deleted on port %d for SecY with Port id :%d......\n",req->port_no, mreq->port_id);
+    return;
+}
+
+static void cli_cmd_rx_sc_create(cli_req_t *req)
+{
+    macsec_configuration *mreq = req->module_req;
+    mepa_macsec_secy_conf_t secy_conf_get;
+    mepa_rc rc;
+
+    if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
+        printf(" Dev is Not Created for the port : %d\n", req->port_no);
+        return;
+    }
+
+    mepa_macsec_port_t  macsec_port;
+    macsec_port.port_no    = req->port_no;
+    macsec_port.service_id = 0;
+    macsec_port.port_id    = mreq->port_id;
+
+    if ((rc = mepa_macsec_secy_conf_get(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &secy_conf_get)) != MEPA_RC_OK) {
+        T_E("\n Error in getting the SecY on port : %d \n", req->port_no);
+        return;
+    }
+    printf("\n MAC Address :  %2x-%2x-%2x-%2x-%2x-%2x \n", secy_conf_get.mac_addr.addr[0], secy_conf_get.mac_addr.addr[1],
+           secy_conf_get.mac_addr.addr[2], secy_conf_get.mac_addr.addr[3], secy_conf_get.mac_addr.addr[4],secy_conf_get.mac_addr.addr[5]);
+
+    mepa_macsec_sci_t sci;
+    memcpy(&sci.mac_addr, &secy_conf_get.mac_addr, sizeof(mepa_mac_t));
+    sci.port_id = mreq->rx_sc_id;
+
+    /* Rx Secure channel Creation */
+    if((rc = mepa_macsec_rx_sc_add(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &sci)) != MEPA_RC_OK) {
+        T_E("\n Error in Rx Secure Channel Create on port : %d\n", req->port_no);
+        return;
+    }
+    cli_printf("\n ...... Receive Secure Channel Created on port %d for SecY with Port id :%d......\n",req->port_no, mreq->port_id);
+
+    return;
+}
+
+static void cli_cmd_macsec_rx_sc_del(cli_req_t *req)
+{
+    macsec_configuration *mreq = req->module_req;
+    mepa_macsec_secy_conf_t secy_conf_get;
+    mepa_rc rc;
+
+    if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
+        printf(" Dev is Not Created for the port : %d\n", req->port_no);
+        return;
+    }
+
+    mepa_macsec_port_t  macsec_port;
+    macsec_port.port_no    = req->port_no;
+    macsec_port.service_id = 0;
+    macsec_port.port_id    = mreq->port_id;
+
+    if ((rc = mepa_macsec_secy_conf_get(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &secy_conf_get)) != MEPA_RC_OK) {
+        T_E("\n Error in getting the SecY on port : %d \n", req->port_no);
+        return;
+    }
+
+    mepa_macsec_sci_t sci;
+    memcpy(&sci.mac_addr, &secy_conf_get.mac_addr, sizeof(mepa_mac_t));
+    sci.port_id = mreq->rx_sc_id;
+
+    /* Rx Secure channel Delete */
+    if((rc = mepa_macsec_rx_sc_del(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &sci)) != MEPA_RC_OK) {
+        T_E("\n Error in Rx Secure Channel Deleted on port : %d\n", req->port_no);
+        return;
+    }
+    cli_printf("\n ...... Receive Secure Channel Deleted on port %d for SecY with Port id :%d......\n",req->port_no, mreq->port_id);
+    return;
+}
+
+static void file_parse_to_get_key(char *filestring)
+{
+    char myString[MAX_STRING_LEN];
+    char *stx_words[MAX_WORD_COUNT];
+    int found_buf = 0, found_hashbuf = 0, found_salt = 0, stx_count = 0, found_ssci = 0;
+    uint8_t value[MAX_KEY_LEN] = {0};
+    cli_build_words(filestring, &stx_count, stx_words,1);
+    for(int k = 0; k < stx_count; k++) {
+	memset(value, 0, sizeof(value));
+        if(strcmp(stx_words[k], "'buf':") == 0) {
+            found_buf = 1;
+            continue;
+        }
+        if(strcmp(stx_words[k], "'h_buf':") == 0) {
+            found_hashbuf = 1;
+            continue;
+        }
+        if(strcmp(stx_words[k], "'s_buf':") == 0) {
+            found_salt = 1;
+            continue;
+        }
+        if(strcmp(stx_words[k], "'ssci':") == 0) {
+            found_ssci = 1;
+            continue;
+        }
+        if(found_buf || found_hashbuf || found_salt || found_ssci) {
+            int j = 0;
+            memcpy(myString, stx_words[k], sizeof(myString));
+            for(int i = 0; myString[i] != ']'; i++) {
+                if(myString[i] == '[')
+                    continue;
+                if (myString[i] == ',') {
+                    j++;
+               }
+               else {
+                   value[j] = value[j] * 10 + (myString[i] - 48);
+               }
+            }
+	    if(found_buf) {
+                memcpy(key, value, sizeof(key));
+                found_buf = 0;
+            } if(found_hashbuf) {
+                memcpy(h_key, value, sizeof(h_key));
+                found_hashbuf = 0;
+            } if(found_salt) {
+                memcpy(salt, value, sizeof(salt));
+                found_salt = 0;
+            } if(found_ssci) {
+                memcpy(ssci_xpn, value, sizeof(ssci_xpn));
+                found_ssci = 0;
+            }
+        }
+    }
+}
+
+static void cli_cmd_tx_sa_create(cli_req_t *req)
+{
+    mepa_rc rc;
+    macsec_configuration *mreq = req->module_req;
+    int file_opened = 0;
+    mepa_macsec_secy_conf_t secy_conf_get;
+    mepa_macsec_ssci_t ssci;
+    if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
+        printf(" Dev is Not Created for the port : %d\n", req->port_no);
+        return;
+    }
+    uint32_t next_pn_nxpn;
+    char myString[MAX_STRING_LEN];
+    char filestring[MAX_WORD_COUNT];
+    if ((fptr = fopen("/root/mepa_scripts/macsec_key.json", "r")) != NULL) {
+        file_opened = 1;
+        while(fgets(myString, sizeof(myString), fptr)) {
+            strcat(filestring, myString);
+        }
+        fclose(fptr);
+    }
+    if(file_opened == 0) {
+        T_E("\n Error in opening the macsec_key.json file .......\n");
+        return;
+    }        
+    file_parse_to_get_key(filestring);
+
+    mepa_macsec_pkt_num_t next_pkt;
+
+    mepa_macsec_port_t  macsec_port;
+    macsec_port.port_no    = req->port_no;
+    macsec_port.service_id = 0;
+    macsec_port.port_id    = mreq->port_id;
+    mepa_macsec_sak_t sak;
+    memcpy(sak.buf, key, sizeof(key));
+    memcpy(sak.h_buf, h_key, sizeof(h_key));
+    memcpy(sak.salt.buf, salt, sizeof(salt));
+    sak.len = MAX_KEY_LEN;
+    memcpy(ssci.buf, ssci_xpn, sizeof(ssci_xpn));
+
+    if ((rc = mepa_macsec_secy_conf_get(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &secy_conf_get)) != MEPA_RC_OK) {
+        T_E("\n Error in getting the SecY Config on port : %d \n", req->port_no);
+        return;
+    }
+
+    if(secy_conf_get.current_cipher_suite == MEPA_MACSEC_CIPHER_SUITE_GCM_AES_XPN_256) {
+        next_pkt.xpn = mreq->next_pn;
+        if((rc = mepa_macsec_tx_seca_set(meba_macsec_instance->phy_devices[req->port_no], macsec_port, mreq->an_no, next_pkt, mreq->conf, &sak, &ssci)) != MEPA_RC_OK)
+        {
+            T_E("Error is creating Tx Secure asoosiation on port %d\n", req->port_no);
+            return;
+        }
+    } else {
+        if(mreq->next_pn > (MASK_32BIT - 1)) {
+             T_E("Selcted Cipher Suit is NON-XPN the PN should be less than 2^32\n");
+        }
+        next_pn_nxpn = mreq->next_pn & MASK_32BIT;
+        if((rc = mepa_macsec_tx_sa_set(meba_macsec_instance->phy_devices[req->port_no], macsec_port, mreq->an_no, next_pn_nxpn, mreq->conf, &sak)) != MEPA_RC_OK) {
+            T_E("Error is creating Tx Secure asoosiation on port %d\n", req->port_no);
+            return;
+        }
+    }
+
+    if((rc = mepa_macsec_tx_sa_activate(meba_macsec_instance->phy_devices[req->port_no], macsec_port, mreq->an_no)) != MEPA_RC_OK) {
+        T_E("\nError in Activating Tx Secure Assosiation on port : %d\n", req->port_no);
+        return;
+    }
+    cli_printf("\n ...... Transmit Secure Association an = %d Created for Channel id :%d ......\n",mreq->an_no, mreq->port_id);
+    return;
+}
+
+static void cli_cmd_rx_sa_create(cli_req_t *req)
+{
+    mepa_rc rc;
+    macsec_configuration *mreq = req->module_req;
+    int file_opened = 0;
+    mepa_macsec_pkt_num_t next_pkt;
+    mepa_macsec_ssci_t ssci;
+    if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
+        printf(" Dev is Not Created for the port : %d\n", req->port_no);
+        return;
+    }
+    uint32_t lowest_pn_nxpn;
+    char myString[MAX_STRING_LEN];
+    char filestring[MAX_WORD_COUNT];
+
+    if ((fptr = fopen("/root/mepa_scripts/macsec_key.json", "r")) != NULL) {
+        file_opened = 1;
+        while(fgets(myString, sizeof(myString), fptr)) {
+            strcat(filestring, myString);
+        }
+        fclose(fptr);
+    }
+    if(file_opened == 0) {
+        T_E("\n Error in opening the macsec_key.json file .......\n");
+        return;
+    }
+    file_parse_to_get_key(filestring);
+
+    mepa_macsec_port_t  macsec_port;
+    macsec_port.port_no    = req->port_no;
+    macsec_port.service_id = 0;
+    macsec_port.port_id    = mreq->port_id;
+    mepa_macsec_secy_conf_t secy_conf_get;
+
+    if ((rc = mepa_macsec_secy_conf_get(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &secy_conf_get)) != MEPA_RC_OK) {
+        T_E("\n Error in getting the SecY on port : %d \n", req->port_no);
+        return;
+    }
+
+    mepa_macsec_sci_t sci;
+    memcpy(&sci.mac_addr, &secy_conf_get.mac_addr, sizeof(mepa_mac_t));
+    sci.port_id = mreq->rx_sc_id;
+
+    mepa_macsec_sak_t sak;
+    memcpy(sak.buf, key, sizeof(key));
+    memcpy(sak.h_buf, h_key, sizeof(h_key));
+    memcpy(sak.salt.buf, salt, sizeof(salt));
+    sak.len = MAX_KEY_LEN;
+    memcpy(ssci.buf, ssci_xpn, sizeof(ssci_xpn));
+
+    if(secy_conf_get.current_cipher_suite == MEPA_MACSEC_CIPHER_SUITE_GCM_AES_XPN_256) {
+        next_pkt.xpn = mreq->lowest_pn;
+        if((rc = mepa_macsec_rx_seca_set(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &sci, mreq->an_no, next_pkt, &sak, &ssci)) != MEPA_RC_OK) {
+            T_E("Error is creating Rx Secure asoosiation on port %d\n", req->port_no);
+            return;
+        }
+    } else {
+        if(mreq->lowest_pn > (MASK_32BIT - 1)) {
+             T_E("Selcted Cipher Suit is NON-XPN the PN should be less than 2^32\n");
+        }
+        lowest_pn_nxpn = mreq->lowest_pn & MASK_32BIT;
+
+        if((rc = mepa_macsec_rx_sa_set(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &sci, mreq->an_no, lowest_pn_nxpn, &sak)) != MEPA_RC_OK) {
+            T_E("Error is creating Rx Secure asoosiation on port %d\n", req->port_no);
+            return;
+        }
+    }
+    if((rc = mepa_macsec_rx_sa_activate(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &sci, mreq->an_no)) != MEPA_RC_OK) {
+        T_E("\n Error in activating Rx Secure Assosiation on port : %d\n", req->port_no);
+        return;
+    }
+    cli_printf("\n ...... Receive Secure Association an = %d Created for Channel id :%d ......\n",mreq->an_no, mreq->rx_sc_id);
+    return;
+}
+
+
+static void cli_cmd_macsec_tx_sa_del(cli_req_t *req)
+{
+    mepa_rc rc;
+    macsec_configuration *mreq = req->module_req;
+    if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
+        printf(" Dev is Not Created for the port : %d\n", req->port_no);
+        return;
+    }
+
+    mepa_macsec_port_t  macsec_port;
+    macsec_port.port_no    = req->port_no;
+    macsec_port.service_id = 0;
+    macsec_port.port_id    = mreq->port_id;
+
+    if((rc = mepa_macsec_tx_sa_del(meba_macsec_instance->phy_devices[req->port_no], macsec_port, mreq->an_no)) != MEPA_RC_OK) {
+        T_E("Error is Deleting Tx Secure asoosiation on port %d\n", req->port_no);
+        return;
+    }
+    cli_printf("\n ...... Transmit Secure Association an = %d Deleted for Channel id :%d ......\n",mreq->an_no, mreq->port_id);
+    return;
+}
+
+static void cli_cmd_macsec_rx_sa_del(cli_req_t *req)
+{
+    mepa_rc rc;
+    macsec_configuration *mreq = req->module_req;
+    if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
+        printf(" Dev is Not Created for the port : %d\n", req->port_no);
+        return;
+    }
+
+    mepa_macsec_port_t  macsec_port;
+    macsec_port.port_no    = req->port_no;
+    macsec_port.service_id = 0;
+    macsec_port.port_id    = mreq->port_id;
+
+    mepa_macsec_secy_conf_t secy_conf_get;
+
+    if ((rc = mepa_macsec_secy_conf_get(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &secy_conf_get)) != MEPA_RC_OK) {
+        T_E("\n Error in getting the SecY on port : %d \n", req->port_no);
+        return;
+    }
+
+    mepa_macsec_sci_t sci;
+    memcpy(&sci.mac_addr, &secy_conf_get.mac_addr, sizeof(mepa_mac_t));
+    sci.port_id = mreq->rx_sc_id;
+
+    if((rc = mepa_macsec_rx_sa_del(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &sci, mreq->an_no)) != MEPA_RC_OK) {
+        T_E("Error is Deleting Rx Secure asoosiation on port %d\n", req->port_no);
+        return;
+    }
+    cli_printf("\n ...... Receive Secure Association an = %d Deleted for Channel id :%d ......\n",mreq->an_no, mreq->rx_sc_id);
+    return;
+}
+
+static void cli_cmd_rx_sa_pn_update(cli_req_t *req)
+{
+    mepa_rc rc;
+    macsec_configuration *mreq = req->module_req;
+    mepa_macsec_pkt_num_t next_pkt;
+    if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
+        printf(" Dev is Not Created for the port : %d\n", req->port_no);
+        return;
+    }
+    uint32_t lowest_pn_nxpn;
+    mepa_macsec_port_t  macsec_port;
+    macsec_port.port_no    = req->port_no;
+    macsec_port.service_id = 0;
+    macsec_port.port_id    = mreq->port_id;
+    mepa_macsec_secy_conf_t secy_conf_get;
+
+    if ((rc = mepa_macsec_secy_conf_get(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &secy_conf_get)) != MEPA_RC_OK) {
+        T_E("\n Error in getting the SecY on port : %d \n", req->port_no);
+        return;
+    }
+
+    mepa_macsec_sci_t sci;
+    memcpy(&sci.mac_addr, &secy_conf_get.mac_addr, sizeof(mepa_mac_t));
+    sci.port_id = mreq->rx_sc_id;
+
+    if(secy_conf_get.current_cipher_suite == MEPA_MACSEC_CIPHER_SUITE_GCM_AES_XPN_256) {
+        next_pkt.xpn = mreq->lowest_pn;
+        if((rc = mepa_macsec_rx_seca_lowest_pn_update(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &sci, mreq->an_no, next_pkt)) != MEPA_RC_OK) {
+            T_E("Error is Updating Next PN on port %d\n", req->port_no);
+            return;
+        }
+    } else {
+
+        if(mreq->lowest_pn > MASK_32BIT) {
+             T_E("Selcted Cipher Suit is NON-XPN the PN should be less than 2^32\n");
+        }
+        lowest_pn_nxpn = mreq->lowest_pn & MASK_32BIT;
+
+        if((rc = mepa_macsec_rx_sa_lowest_pn_update(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &sci, mreq->an_no, lowest_pn_nxpn)) != MEPA_RC_OK) {
+            T_E("Error is Updating Next PN on port %d\n", req->port_no);
+            return;
+        }
+    }
+    cli_printf("\n ...... Receive Secure Association an = %d PN Updated for Channel id :%d with PN = %d......\n",mreq->an_no, mreq->rx_sc_id, mreq->lowest_pn);
+    return;
+}
+
+static void cli_macsec_statistics(const char *col1, const char *col2, uint64_t value1, uint64_t value2)
+{
+    if(strcmp(col2, "NULL") == 0) {
+        cli_printf("%-30s %s %-15d\n", col1, ":", value1);
+        return;
+    }
+    cli_printf("%-30s %s %-15d %-30s %s %-15d\n", col1, ":", value1, col2, ":", value2);     
+}                     
+
+static void cli_cmd_macsec_secy_statistics(cli_req_t *req)
+{
+    mepa_rc rc;
+    macsec_configuration *mreq = req->module_req;
+    if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
+        printf(" Dev is Not Created for the port : %d\n", req->port_no);
+        return;
+    }
+    mepa_macsec_port_t  macsec_port;
+    macsec_port.port_no    = req->port_no;
+    macsec_port.service_id = 0;
+    macsec_port.port_id    = mreq->port_id;
+    if(!mreq->statistics_get) {
+        if ((rc = mepa_macsec_secy_counters_clear(meba_macsec_instance->phy_devices[req->port_no], macsec_port)) != MEPA_RC_OK) {
+            T_E("\n Error in Clearing the SecY Statistics on port : %d \n", req->port_no);
+            return;
+        }
+        return;
+    }
+
+    mepa_macsec_secy_counters_t counters;
+    if ((rc = mepa_macsec_secy_counters_get(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &counters)) != MEPA_RC_OK) {
+        T_E("\n Error in getting the SecY Statistics on port : %d \n", req->port_no);
+        return;
+    }
+    cli_printf("\n\n");
+    cli_printf("Secy Statistics\n");
+    cli_printf("============================\n");
+    cli_macsec_statistics("in_pkts_untagged", "in_pkts_no_tag", counters.in_pkts_untagged, counters.in_pkts_no_tag);
+    cli_macsec_statistics("in_pkts_bad_tag", "in_pkts_unknown_sci", counters.in_pkts_bad_tag, counters.in_pkts_unknown_sci);
+    cli_macsec_statistics("in_pkts_no_sci", "in_pkts_overrun", counters.in_pkts_no_sci, counters.in_pkts_overrun);
+    cli_macsec_statistics("in_octets_validated", "in_octets_decrypted", counters.in_octets_validated, counters.in_octets_decrypted);
+    cli_macsec_statistics("out_pkts_untagged", "out_pkts_too_long", counters.out_pkts_untagged, counters.out_pkts_too_long);
+    cli_macsec_statistics("out_octets_protected", "out_octets_encrypted", counters.out_octets_protected, counters.out_octets_encrypted);
+    return;
+}
+
+static void cli_cmd_macsec_tx_sc_statistics(cli_req_t *req)
+{
+    mepa_rc rc;
+    macsec_configuration *mreq = req->module_req;
+    if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
+        printf(" Dev is Not Created for the port : %d\n", req->port_no);
+        return;
+    }
+    mepa_macsec_port_t  macsec_port;
+    macsec_port.port_no    = req->port_no;
+    macsec_port.service_id = 0;
+    macsec_port.port_id    = mreq->port_id;
+    if(!mreq->statistics_get) {
+        if ((rc = mepa_macsec_txsc_counters_clear(meba_macsec_instance->phy_devices[req->port_no], macsec_port)) != MEPA_RC_OK) {
+            T_E("\n Error in Clearing the Transmit Secure Channel Statistics on port : %d \n", req->port_no);
+            return;
+        }
+        return;
+    }
+    mepa_macsec_tx_sc_counters_t counters;
+    if ((rc = mepa_macsec_tx_sc_counters_get(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &counters)) != MEPA_RC_OK) {
+        T_E("\n Error in getting the Transmit Secure Channel Statistics on port : %d \n", req->port_no);
+        return;
+    }
+    cli_printf("\n\n");
+    cli_printf("Transmit Secure Channel Statistics\n");
+    cli_printf("===============================================\n");
+    cli_macsec_statistics("out_pkts_protected", "out_pkts_encrypted", counters.out_pkts_protected, counters.out_pkts_encrypted);
+    cli_macsec_statistics("out_octets_protected", "out_octets_encrypted", counters.out_octets_protected, counters.out_octets_encrypted);
+    return;
+}
+
+static void cli_cmd_macsec_tx_sa_statistics(cli_req_t *req)
+{
+    mepa_rc rc;
+    macsec_configuration *mreq = req->module_req;
+    if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
+        printf(" Dev is Not Created for the port : %d\n", req->port_no);
+        return;
+    }
+    mepa_macsec_port_t  macsec_port;
+    macsec_port.port_no    = req->port_no;
+    macsec_port.service_id = 0;
+    macsec_port.port_id    = mreq->port_id;
+    if(!mreq->statistics_get) {
+        if ((rc = mepa_macsec_txsa_counters_clear(meba_macsec_instance->phy_devices[req->port_no], macsec_port, mreq->an_no)) != MEPA_RC_OK) {
+            T_E("\n Error in Clearing the Transmit Secure Association Statistics on port : %d \n", req->port_no);
+            return;
+        }
+        return;
+    }
+    mepa_macsec_tx_sa_counters_t counters;
+    if ((rc = mepa_macsec_tx_sa_counters_get(meba_macsec_instance->phy_devices[req->port_no], macsec_port, mreq->an_no, &counters)) != MEPA_RC_OK) {
+        T_E("\n Error in getting the Transmit Secure Association Statistics on port : %d \n", req->port_no);
+        return;
+    }
+    cli_printf("\n\n");
+    cli_printf("Transmit Secure Association Statistics \n");
+    cli_printf("==================================================\n");
+    cli_printf("%-30s %s %-15d\n", "out_pkts_protected", ":", counters.out_pkts_protected);
+    cli_printf("%-30s %s %-15d\n", "out_pkts_encrypted", ":", counters.out_pkts_encrypted);
+    return;
+}
+
+static void cli_cmd_macsec_rx_sc_statistics(cli_req_t *req)
+{
+    mepa_rc rc;
+    macsec_configuration *mreq = req->module_req;
+    if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
+        printf(" Dev is Not Created for the port : %d\n", req->port_no);
+        return;
+    }
+    mepa_macsec_port_t  macsec_port;
+    macsec_port.port_no    = req->port_no;
+    macsec_port.service_id = 0;
+    macsec_port.port_id    = mreq->port_id;
+    mepa_macsec_secy_conf_t secy_conf_get;
+
+    if ((rc = mepa_macsec_secy_conf_get(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &secy_conf_get)) != MEPA_RC_OK) {
+        T_E("\n Error in getting the SecY on port : %d \n", req->port_no);
+        return;
+    }
+
+    mepa_macsec_sci_t sci;
+    memcpy(&sci.mac_addr, &secy_conf_get.mac_addr, sizeof(mepa_mac_t));
+    sci.port_id = mreq->rx_sc_id;
+
+    if(!mreq->statistics_get) {
+        if ((rc = mepa_macsec_rxsc_counters_clear(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &sci)) != MEPA_RC_OK) {
+            T_E("\n Error in Clearing the Receive Secure Channel Statistics on port : %d \n", req->port_no);
+            return;
+        }
+        return;
+    }
+    mepa_macsec_rx_sc_counters_t counters;
+    if ((rc = mepa_macsec_rx_sc_counters_get(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &sci, &counters)) != MEPA_RC_OK) {
+        T_E("\n Error in getting the Receive Secure Channel Statistics on port : %d \n", req->port_no);
+        return;
+    }
+    cli_printf("\n\n");
+    cli_printf("Receive Secure Channel Statistics \n");
+    cli_printf("=================================================\n");
+    cli_macsec_statistics("in_pkts_unchecked", "in_pkts_delayed", counters.in_pkts_unchecked, counters.in_pkts_delayed);
+    cli_macsec_statistics("in_pkts_late", "in_pkts_ok", counters.in_pkts_late, counters.in_pkts_ok);
+    cli_macsec_statistics("in_pkts_invalid", "in_pkts_not_valid", counters.in_pkts_invalid, counters.in_pkts_not_valid);
+    cli_macsec_statistics("in_pkts_not_using_sa", "in_pkts_unused_sa", counters.in_pkts_not_using_sa, counters.in_pkts_unused_sa);
+    cli_macsec_statistics("in_octets_validated", "in_octets_decrypted", counters.in_octets_validated, counters.in_octets_decrypted);
+    return;
+}
+
+static void cli_cmd_macsec_rx_sa_statistics(cli_req_t *req)
+{
+    mepa_rc rc;
+    macsec_configuration *mreq = req->module_req;
+    if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
+        printf(" Dev is Not Created for the port : %d\n", req->port_no);
+        return;
+    }
+    mepa_macsec_port_t  macsec_port;
+    macsec_port.port_no    = req->port_no;
+    macsec_port.service_id = 0;
+    macsec_port.port_id    = mreq->port_id;
+    mepa_macsec_secy_conf_t secy_conf_get;
+
+    if ((rc = mepa_macsec_secy_conf_get(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &secy_conf_get)) != MEPA_RC_OK) {
+        T_E("\n Error in getting the SecY on port : %d \n", req->port_no);
+        return;
+    }
+
+    mepa_macsec_sci_t sci;
+    memcpy(&sci.mac_addr, &secy_conf_get.mac_addr, sizeof(mepa_mac_t));
+    sci.port_id = mreq->rx_sc_id;
+
+    if(!mreq->statistics_get) {
+        if ((rc = mepa_macsec_rxsa_counters_clear(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &sci, mreq->an_no)) != MEPA_RC_OK) {
+            T_E("\n Error in Clearing the Receive Secure Association Statistics on port : %d \n", req->port_no);
+            return;
+        }
+        return;
+    }
+    mepa_macsec_rx_sa_counters_t counters;
+    if ((rc = mepa_macsec_rx_sa_counters_get(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &sci, mreq->an_no, &counters)) != MEPA_RC_OK) {
+        T_E("\n Error in getting the Receive Secure Association Statistics on port : %d \n", req->port_no);
+        return;
+    }
+    cli_printf("\n\n");
+    cli_printf("Receive Secure Association Statistics \n");
+    cli_printf("===================================================\n");
+    cli_macsec_statistics("in_pkts_ok", "in_pkts_invalid", counters.in_pkts_ok, counters.in_pkts_invalid);
+    cli_macsec_statistics("in_pkts_not_valid", "in_pkts_not_using_sa", counters.in_pkts_not_valid, counters.in_pkts_not_using_sa);
+    cli_macsec_statistics("in_pkts_unchecked", "in_pkts_delayed", counters.in_pkts_unchecked, counters.in_pkts_delayed);
+    cli_macsec_statistics("in_pkts_late", "NULL", counters.in_pkts_late, 0);
+
+    return;
+}
+
+static void cli_cmd_macsec_mac_statistics(cli_req_t *req)
+{
+    mepa_rc rc;
+    macsec_configuration *mreq = req->module_req;
+    if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
+        printf(" Dev is Not Created for the port : %d\n", req->port_no);
+        return;
+    }
+    if(!mreq->statistics_get) {
+        if(mreq->hmac_counters) {
+            if ((rc = mepa_macsec_hmac_counters_clear(meba_macsec_instance->phy_devices[req->port_no], req->port_no)) != MEPA_RC_OK) {
+                T_E("\n Error in Clearing HMAC Counters on port : %d \n", req->port_no);
+                return;
+             }
+        } else{
+            if ((rc = mepa_macsec_lmac_counters_clear(meba_macsec_instance->phy_devices[req->port_no], req->port_no)) != MEPA_RC_OK) {
+                T_E("\n Error in Clearing LMAC Counters on port : %d \n", req->port_no);
+                return;
+            }
+        }
+        return;
+    }
+    mepa_macsec_mac_counters_t counters;
+    if(mreq->hmac_counters) {
+         if ((rc = mepa_macsec_hmac_counters_get(meba_macsec_instance->phy_devices[req->port_no], req->port_no, &counters, FALSE)) != MEPA_RC_OK) {
+             T_E("\n Error in Getting HMAC Counters on port : %d \n", req->port_no);
+             return;
+         }
+         cli_printf("\n\n");
+         cli_printf("HOST MAC Statistics \n");
+         cli_printf("============================\n");
+    } else{
+        if ((rc = mepa_macsec_lmac_counters_get(meba_macsec_instance->phy_devices[req->port_no], req->port_no, &counters, FALSE)) != MEPA_RC_OK) {
+            T_E("\n Error in Getting LMAC Counters on port : %d \n", req->port_no);
+            return;
+        }
+        cli_printf("\n\n");
+        cli_printf("LINE MAC Statistics \n");
+        cli_printf("============================\n");
+    }
+    cli_macsec_statistics("if_rx_octets", "if_rx_in_bytes", counters.if_rx_octets, counters.if_rx_in_bytes);
+    cli_macsec_statistics("if_rx_pause_pkts", "if_rx_ucast_pkts", counters.if_rx_pause_pkts, counters.if_rx_ucast_pkts);
+    cli_macsec_statistics("if_rx_multicast_pkts", "if_rx_broadcast_pkts", counters.if_rx_multicast_pkts, counters.if_rx_broadcast_pkts);
+    cli_macsec_statistics("if_rx_discards", "if_rx_errors", counters.if_rx_discards, counters.if_rx_errors);
+    cli_macsec_statistics("if_rx_StatsPkts", "if_rx_CRCAlignErrors", counters.if_rx_StatsPkts, counters.if_rx_CRCAlignErrors);
+    cli_macsec_statistics("if_rx_UndersizePkts", "if_rx_OversizePkts", counters.if_rx_UndersizePkts, counters.if_rx_OversizePkts);
+    cli_macsec_statistics("if_rx_Fragments", "if_rx_Jabbers", counters.if_rx_Fragments, counters.if_rx_Jabbers);
+    cli_macsec_statistics("if_rx_Pkts64Octets", "if_rx_Pkts65to127Octets", counters.if_rx_Pkts64Octets, counters.if_rx_Pkts65to127Octets);
+    cli_macsec_statistics("if_rx_Pkts128to255Octets", "if_rx_Pkts256to511Octets", counters.if_rx_Pkts128to255Octets, counters.if_rx_Pkts256to511Octets);
+    cli_macsec_statistics("if_rx_Pkts512to1023Octets", "if_rx_Pkts1024to1518Octets", counters.if_rx_Pkts512to1023Octets, counters.if_rx_Pkts1024to1518Octets);
+    cli_macsec_statistics("if_rx_Pkts1519toMaxOctets", "NULL", counters.if_rx_Pkts1519toMaxOctets, 0);
+    cli_printf("\n\n");
+    cli_macsec_statistics("if_tx_octets", "if_tx_errors", counters.if_tx_octets, counters.if_tx_errors);
+    cli_macsec_statistics("if_tx_pause_pkts", "if_tx_ucast_pkts", counters.if_tx_pause_pkts, counters.if_tx_ucast_pkts);
+    cli_macsec_statistics("if_tx_multicast_pkts", "if_tx_broadcast_pkts", counters.if_tx_multicast_pkts, counters.if_tx_broadcast_pkts);
+    cli_macsec_statistics("if_tx_StatsPkts", "if_tx_DropEvents", counters.if_tx_StatsPkts, counters.if_tx_DropEvents);
+    cli_macsec_statistics("if_tx_Pkts64Octets", "if_tx_Pkts65to127Octets", counters.if_tx_Pkts64Octets, counters.if_tx_Pkts65to127Octets);
+    cli_macsec_statistics("if_tx_Pkts128to255Octets", "if_tx_Pkts256to511Octets", counters.if_tx_Pkts128to255Octets, counters.if_tx_Pkts256to511Octets);
+    cli_macsec_statistics("if_tx_Pkts512to1023Octets", "if_tx_Pkts1024to1518Octets", counters.if_tx_Pkts512to1023Octets, counters.if_tx_Pkts1024to1518Octets);
+    cli_macsec_statistics("if_tx_Pkts1519toMaxOctets", "if_tx_Collisions", counters.if_tx_Pkts1519toMaxOctets, counters.if_tx_Collisions);
+    return;
+}
+
 
 static void cli_cmd_macsec_demo(cli_req_t *req)
 {
@@ -476,60 +1176,70 @@ static int cli_cmd_parse_u16_param(cli_req_t *req)
     macsec_configuration *mreq = req->module_req;
 
     if (keyword.etype_parsed == 1) {
-        cli_parm_u16(req, &value, 0, 0xFFFF);
+        cli_parm_u16(req, &value, 0, MASK_16BIT);
         mreq->pattern_ethtype = value;
         keyword.etype_parsed = 0;
     }
     else if(keyword.match_parsed == 1) {
-        cli_parm_u16(req, &value, 0, 0xFFFF);
+        cli_parm_u16(req, &value, 0, MASK_16BIT);
         mreq->pattern_match = value;
         keyword.match_parsed = 0;
     }
     else if(keyword.vlan_id_parsed == 1) {
-        cli_parm_u16(req, &value, 0, 0xFFFF);
+        cli_parm_u16(req, &value, 0, MASK_16BIT);
         mreq->vid = value;
         keyword.vlan_id_parsed = 0;
     }
     else if(keyword.vlan_inner_id_parsed == 1) {
-        cli_parm_u16(req, &value, 0, 0xFFFF);
+        cli_parm_u16(req, &value, 0, MASK_16BIT);
         mreq->vid_inner = value;
         keyword.vlan_inner_id_parsed = 0;
     }
+    else if(keyword.rx_sc_id_parsed == 1) {
+        cli_parm_u16(req, &value, 0, MASK_16BIT);
+        mreq->rx_sc_id = value;
+        keyword.rx_sc_id_parsed = 0;
+    }
+    else if(keyword.an_parsed == 1) {
+        cli_parm_u16(req, &value, 0, MASK_16BIT);
+        mreq->an_no = value;
+        keyword.an_parsed = 0;
+    }
     else {
-        cli_parm_u16(req, &value, 0, 0xFFFF);
+        cli_parm_u16(req, &value, 0, MASK_16BIT);
 	mreq->port_id = value;
     }
     return 0;
 }
 
-
 static int cli_cmd_parse_boolean(cli_req_t *req)
 {
-    const char     *found;
     macsec_configuration *mreq = req->module_req;
-    int len = 0;
-    if ((found = cli_parse_find(req->cmd, req->stx)) == NULL)
-        return 1;
-    len = strlen(found);
-    if (!strncasecmp(found, KEYWORD_CREATE, len)) {
+    if (!strncasecmp(req->cmd, KEYWORD_CREATE, strlen(req->cmd))) {
         mreq->secy_create = 1;
     }
-    else if (!strncasecmp(found, KEYWORD_UPDATE, len)) {
+    else if (!strncasecmp(req->cmd, KEYWORD_UPDATE, strlen(req->cmd))) {
         mreq->secy_create = 0;
     }
-    else if (!strncasecmp(found, KEYWORD_TRUE, len)) {
+    else if (!strncasecmp(req->cmd, KEYWORD_TRUE, strlen(req->cmd))) {
         mreq->conf = 1;
         mreq->protect_frames = 1;
     }
-    else if (!strncasecmp(found, KEYWORD_FALSE, len)) {
+    else if (!strncasecmp(req->cmd, KEYWORD_FALSE, strlen(req->cmd))) {
         mreq->conf = 0;
         mreq->protect_frames = 0;
     }
-    else if (!strncasecmp(found, KEYWORD_EGRESS, len)) {
+    else if (!strncasecmp(req->cmd, KEYWORD_EGRESS, strlen(req->cmd))) {
         mreq->egress_direction = 1;
     }
-    else if (!strncasecmp(found, KEYWORD_INGRESS, len)) {
+    else if (!strncasecmp(req->cmd, KEYWORD_INGRESS, strlen(req->cmd))) {
         mreq->egress_direction = 0;
+    }
+    else if (!strncasecmp(req->cmd, KEYWORD_HMAC, strlen(req->cmd))) {
+        mreq->hmac_counters = 1;
+    }
+    else if (!strncasecmp(req->cmd, KEYWORD_LMAC, strlen(req->cmd))) {
+        mreq->hmac_counters = 0;
     }
     return 0;
 }
@@ -592,29 +1302,80 @@ static int cli_cmd_parse_match_action(cli_req_t *req)
 
 static int cli_cmd_parse_keyword(cli_req_t *req)
 {
-    int len = 0;
-    len = strlen(req->cmd);
-    if (!strncasecmp(req->cmd, KEYWORD_ETHTYPE, len)) {
+    if (!strncasecmp(req->cmd, KEYWORD_ETHTYPE, strlen(req->cmd))) {
         keyword.etype_parsed = 1;
     }
-    else if (!strncasecmp(req->cmd, KEYWORD_SRC_MAC, len)) {
+    else if (!strncasecmp(req->cmd, KEYWORD_SRC_MAC, strlen(req->cmd))) {
         keyword.src_mac_parsed = 1;
     }
-    else if (!strncasecmp(req->cmd, KEYWORD_DST_MAC, len)) {
+    else if (!strncasecmp(req->cmd, KEYWORD_DST_MAC, strlen(req->cmd))) {
         keyword.dst_mac_parsed = 1;
     }
-    else if (!strncasecmp(req->cmd, KEYWORD_MATCH, len)) {
+    else if (!strncasecmp(req->cmd, KEYWORD_MATCH, strlen(req->cmd))) {
         keyword.match_parsed = 1;
     }
-    else if (!strncasecmp(req->cmd, KEYWORD_VLANID, len)) {
+    else if (!strncasecmp(req->cmd, KEYWORD_VLANID, strlen(req->cmd))) {
         keyword.vlan_id_parsed = 1;
     }
-    else if (!strncasecmp(req->cmd, KEYWORD_VIDINNER, len)) {
+    else if (!strncasecmp(req->cmd, KEYWORD_VIDINNER, strlen(req->cmd))) {
         keyword.vlan_inner_id_parsed = 1;
+    }
+    else if (!strncasecmp(req->cmd, KEYWORD_SC_ID, strlen(req->cmd))) {
+        keyword.rx_sc_id_parsed = 1;
+    }
+    else if (!strncasecmp(req->cmd, KEYWORD_AN, strlen(req->cmd))) {
+        keyword.an_parsed = 1;
+    }
+    else if (!strncasecmp(req->cmd, KEYWORD_NEXT_PN, strlen(req->cmd))) {
+        keyword.next_pn_parsed = 1;
+    }
+    else if (!strncasecmp(req->cmd, KEYWORD_CONF, strlen(req->cmd))) {
+        keyword.conf_parsed = 1;
+    }
+    else if (!strncasecmp(req->cmd, KEYWORD_LOW_PN, strlen(req->cmd))) {
+        keyword.lowest_pn_parsed = 1;
     }
     return 0;
 }
 
+
+static int cli_cmd_parse_u64_param(cli_req_t *req)
+{
+    uint64_t value;
+    macsec_configuration *mreq = req->module_req;
+    if (keyword.next_pn_parsed == 1) {
+        cli_parm_u64(req, &value, 0, MASK_64BIT);
+        mreq->next_pn = value;
+        keyword.next_pn_parsed = 0;
+    }
+
+    else if (keyword.lowest_pn_parsed == 1) {
+        cli_parm_u64(req, &value, 0, MASK_64BIT);
+        mreq->lowest_pn = value;
+        keyword.lowest_pn_parsed = 0;
+    }
+    else {
+        cli_parm_u64(req, &value, 0, MASK_64BIT);
+        mreq->seq_threshold_value = value;
+    }
+
+    return 0;
+}
+
+static int cli_cmd_stats_get_clear(cli_req_t *req)
+{
+    macsec_configuration *mreq = req->module_req;
+
+    if (!strncasecmp(req->cmd, KEYWORD_GET, strlen(req->cmd))) {
+        mreq->statistics_get = 1;
+    }
+
+    if (!strncasecmp(req->cmd, KEYWORD_CLEAR, strlen(req->cmd))) {
+        mreq->statistics_get = 0;
+    }
+
+    return 0;
+}
 
 static cli_cmd_t cli_cmd_macsec_table[] = {
     {
@@ -665,6 +1426,95 @@ static cli_cmd_t cli_cmd_macsec_table[] = {
         cli_cmd_match_conf,
     },
 
+    {
+        "tx_sc_create <port_no> port-id <port_id>",
+        "Transmit Secure Channel Creation",
+        cli_cmd_tx_sc_create,
+    },
+
+    {
+        "rx_sc_create <port_no> port-id <port_id> sc-id <id>",
+        "Receive Secure Channel Creation",
+        cli_cmd_rx_sc_create,
+    },
+
+    {
+        "tx_sc_del <port_no> port-id <port_id>",
+        "Delete Transmit Secure Channel",
+        cli_cmd_macsec_tx_sc_del,
+    },
+
+    {
+        "rx_sc_del <port_no> port-id <port_id> sc-id <id>",
+        "Delete Receive Secure Channel",
+        cli_cmd_macsec_rx_sc_del,
+    },
+
+    {
+        "tx_sa_create <port_no> port-id <port_id> an <an_no> next-pn <pn> conf [true|false]",
+        "Transmit Secure Assosiation Creation",
+        cli_cmd_tx_sa_create,
+    },
+
+    {
+        "rx_sa_create <port_no> port-id <port_id> sc-id <id> an <an_no> lowest-pn <pn>",
+        "Receive Secure Assosiation Creation",
+        cli_cmd_rx_sa_create,
+    },
+
+    {
+        "tx_sa_del <port_no> port-id <port_id> an <an_no>",
+        "Delete the Transmit Secure Association",
+        cli_cmd_macsec_tx_sa_del,
+    },
+
+    {
+        "rx_sa_del <port_no> port-id <port_id> sc-id <id>",
+        "Delete Receive Secure Association",
+        cli_cmd_macsec_rx_sa_del,
+    },
+
+    {
+        "rx_sa_pn_upd <port_no> port-id <port_id> sc-id <id> an <an_no> lowest-pn <pn>",
+        "Receive Secure Assosiation Creation",
+        cli_cmd_rx_sa_pn_update,
+    },
+
+    {
+        "statistics secy <port_no> port-id <port_id> [get|clear]",
+        "Get or Clear the Secure Entity Statistics",
+         cli_cmd_macsec_secy_statistics,
+    },
+
+    {
+        "statistics tx_sc <port_no> port-id <port_id> [get|clear]",
+        "Get or Clear Transmit Secure channel Statistics",
+        cli_cmd_macsec_tx_sc_statistics,
+    },
+
+    {
+        "statistics tx_sa <port_no> port-id <port_id> an <an_no> [get|clear]",
+        "Get or Clear Transmit Secure Association Statistics",
+        cli_cmd_macsec_tx_sa_statistics,
+    },
+
+    {
+        "statistics rx_sc <port_no> port-id <port_id> sc-id <id> [get|clear]",
+        "Get or Clear Receive Secure channel Statistics",
+        cli_cmd_macsec_rx_sc_statistics,
+    },
+
+    {
+        "statistics rx_sa <port_no> port-id <port_id> sc-id <id> an <an_no> [get|clear]",
+        "Get or Clear Receive Secure Association Statistics",
+        cli_cmd_macsec_rx_sa_statistics,
+    },
+
+    {
+        "statistics mac [hmac|lmac] <port_no> [get|clear]",
+        "Get or Clear HOST/LINE MAC Statistics",
+        cli_cmd_macsec_mac_statistics,
+    },
 };
 
 
@@ -719,6 +1569,13 @@ static cli_parm_t cli_parm_table[] = {
     },
 
     {
+        "<id>",
+        "Receive Secure Channel Identifier",
+        CLI_PARM_FLAG_SET,
+        cli_cmd_parse_u16_param,
+    },
+
+    {
         "create|update",
         "\n\t create    : Create new MACsec Secure Entity \n"
         "\t update    : Update the Configuration of existing Secure Entity \n",
@@ -755,6 +1612,22 @@ static cli_parm_t cli_parm_table[] = {
     },
 
     {
+        "get|clear",
+        "\n\t get : Get the Statistics\n"
+        "\t clear : Clear the Statistics\n",
+        CLI_PARM_FLAG_SET,
+        cli_cmd_stats_get_clear,
+    },
+
+    {
+        "hmac|lmac",
+        "\n\t hmac : Host MAC Statistics\n"
+        "\t lmac : Line MAC Statistics\n",
+        CLI_PARM_FLAG_NONE,
+        cli_cmd_parse_boolean,
+    },
+
+    {
         "<match_value>",
         "Parameter Needs to be Matched",
         CLI_PARM_FLAG_SET,
@@ -773,6 +1646,27 @@ static cli_parm_t cli_parm_table[] = {
         "\n\t Vlan Id\n",
         CLI_PARM_FLAG_NONE,
         cli_cmd_parse_u16_param,
+    },
+
+    {
+        "<an_no>",
+        "Association Number",
+        CLI_PARM_FLAG_SET,
+        cli_cmd_parse_u16_param,
+    },
+
+    {
+        "<pn>",
+        "Packet Number",
+        CLI_PARM_FLAG_SET,
+        cli_cmd_parse_u64_param,
+    },
+
+    {
+        "true|false",
+         "",
+         CLI_PARM_FLAG_NO_TXT,
+         cli_cmd_parse_boolean,
     },
 	
     {
@@ -850,7 +1744,42 @@ static cli_parm_t cli_parm_table[] = {
         "",
         CLI_PARM_FLAG_NO_TXT,
         cli_cmd_parse_keyword,
-    }
+    },
+
+    {
+        "sc-id",
+        "",
+        CLI_PARM_FLAG_NO_TXT,
+        cli_cmd_parse_keyword,
+    },
+
+    {
+        "an",
+        "",
+        CLI_PARM_FLAG_NO_TXT,
+        cli_cmd_parse_keyword,
+    },
+
+    {
+        "next-pn",
+        "",
+        CLI_PARM_FLAG_NO_TXT,
+        cli_cmd_parse_keyword,
+    },
+
+    {
+        "conf",
+        "",
+        CLI_PARM_FLAG_NO_TXT,
+        cli_cmd_parse_keyword,
+    },
+
+     {
+        "lowest-pn",
+        "",
+        CLI_PARM_FLAG_NO_TXT,
+        cli_cmd_parse_keyword,
+    },
 };
 
 
