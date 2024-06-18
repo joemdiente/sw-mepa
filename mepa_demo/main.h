@@ -49,6 +49,7 @@ typedef struct {
 void mscc_appl_port_init(mscc_appl_init_t *init);
 void mscc_appl_phy_init(mscc_appl_init_t *init);
 void mscc_appl_kat_demo(mscc_appl_init_t *init);
+void mscc_appl_phy_synce(mscc_appl_init_t *init);
 void mscc_appl_sfp_init(mscc_appl_init_t *init);
 void mscc_appl_mac_init(mscc_appl_init_t *init);
 void mscc_appl_vlan_init(mscc_appl_init_t *init);
