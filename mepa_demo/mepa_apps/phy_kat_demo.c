@@ -631,9 +631,9 @@ static int port_phy_scan(){
         }
         macsec_ports[num_macsec_ports] = port_no;
         mepa_phy_info_get(meba_phy_instance->phy_devices[port_no], &phy_info);
-        if(phy_info.cap & 0x1) {
+        if(phy_info.cap & MEPA_CAP_SPEED_MASK_1G) {
             phy_type = PHY_IS_1G;
-        } else if(phy_info.cap & 0x4) {
+        } else if(phy_info.cap & MEPA_CAP_SPEED_MASK_10G) {
             phy_type = PHY_IS_10G;
         } else if(phy_info.cap & 0x8) {
             phy_type = PHY_IS_25G;

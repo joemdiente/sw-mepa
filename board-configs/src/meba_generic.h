@@ -101,7 +101,7 @@ static inline mesa_bool_t is_10g_port(meba_port_cap_t port_cap)
 {
     return has_cap(port_cap, MEBA_PORT_CAP_10G_FDX);
 }
-void m10g_mode_conf(const vtss_inst_t inst, mepa_port_no_t iport, mepa_port_no_t slot_port);
+void m10g_mode_conf(const vtss_inst_t inst, meba_inst_t meba_inst, mepa_port_no_t iport, mepa_port_no_t slot_port);
 void phy_25g_slot1_scan(meba_inst_t inst, mepa_port_no_t port_no, meba_port_entry_t *entry);
 void phy_25g_slot2_scan(meba_inst_t inst, mepa_port_no_t port_no, meba_port_entry_t *entry);
 #endif /* _MEBA_GENERIC_H_ */
