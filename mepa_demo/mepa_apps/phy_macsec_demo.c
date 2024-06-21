@@ -594,6 +594,7 @@ static void cli_cmd_tx_sa_create(cli_req_t *req)
     mepa_rc rc;
     macsec_configuration *mreq = req->module_req;
     int file_opened = 0;
+    char filename[100];
     mepa_macsec_secy_conf_t secy_conf_get;
     mepa_macsec_ssci_t ssci;
     if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
@@ -603,7 +604,19 @@ static void cli_cmd_tx_sa_create(cli_req_t *req)
     uint32_t next_pn_nxpn;
     char myString[MAX_STRING_LEN];
     char filestring[MAX_WORD_COUNT];
-    if ((fptr = fopen("/root/mepa_scripts/macsec_key.json", "r")) != NULL) {
+    char file_location[] = "/root/mepa_scripts/";
+    cli_printf("\n\n");
+    cli_printf("\td - Default File for MACsec SAK \"macsec_key.json\"");
+    cli_printf("\n\tEnter MACsec SAK File Name default(press d) or enter file name : ");
+    scanf("%s", filename);
+
+    if ((strlen(filename) == 1) && (filename[0] == 'd' || filename[0] == 'D')) {
+        strcat(file_location, "macsec_key.json");
+    } else {
+        strcat(file_location, filename);
+    }
+
+    if ((fptr = fopen(file_location, "r")) != NULL) {
         file_opened = 1;
         while(fgets(myString, sizeof(myString), fptr)) {
             strcat(filestring, myString);
@@ -611,7 +624,7 @@ static void cli_cmd_tx_sa_create(cli_req_t *req)
         fclose(fptr);
     }
     if(file_opened == 0) {
-        T_E("\n Error in opening the macsec_key.json file .......\n");
+        T_E("\n Error in opening the %s file .......\n", file_location);
         return;
     }        
     file_parse_to_get_key(filestring);
@@ -665,6 +678,7 @@ static void cli_cmd_rx_sa_create(cli_req_t *req)
     mepa_rc rc;
     macsec_configuration *mreq = req->module_req;
     int file_opened = 0;
+    char filename[100];
     mepa_macsec_pkt_num_t next_pkt;
     mepa_macsec_ssci_t ssci;
     if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
@@ -674,8 +688,19 @@ static void cli_cmd_rx_sa_create(cli_req_t *req)
     uint32_t lowest_pn_nxpn;
     char myString[MAX_STRING_LEN];
     char filestring[MAX_WORD_COUNT];
+    char file_location[] = "/root/mepa_scripts/";
+    cli_printf("\n\n");
+    cli_printf("\td - Default File for MACsec SAK \"macsec_key.json\"");
+    cli_printf("\n\tEnter MACsec SAK File Name default(press d) or enter file name : ");
+    scanf("%s", filename);
 
-    if ((fptr = fopen("/root/mepa_scripts/macsec_key.json", "r")) != NULL) {
+    if ((strlen(filename) == 1) && (filename[0] == 'd' || filename[0] == 'D')) {
+        strcat(file_location, "macsec_key.json");
+    } else {
+        strcat(file_location, filename);
+    }
+
+    if ((fptr = fopen(file_location, "r")) != NULL) {
         file_opened = 1;
         while(fgets(myString, sizeof(myString), fptr)) {
             strcat(filestring, myString);
@@ -683,7 +708,7 @@ static void cli_cmd_rx_sa_create(cli_req_t *req)
         fclose(fptr);
     }
     if(file_opened == 0) {
-        T_E("\n Error in opening the macsec_key.json file .......\n");
+        T_E("\n Error in opening %s file .......\n", file_location);
         return;
     }
     file_parse_to_get_key(filestring);
