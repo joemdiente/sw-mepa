@@ -94,15 +94,19 @@ static mscc_appl_trace_group_t trace_groups[10] = {
 #define MASK_16BIT       0xFFFF                 /* 16 Bit Mask value */
 #define MASK_32BIT       0xFFFFFFFF             /* 32 Bit Mask value */
 #define MASK_64BIT       0xFFFFFFFFFFFFFFFF     /* 64 Bit mask value */
+#define NUMBER_ASCII_TO_DECIMAL 48
+#define DIGIT_TO_NUMBER         10
 FILE *fptr;
 uint8_t key[MAX_KEY_LEN]         = {0};
 uint8_t h_key[MAX_HASK_KEY_LEN]  = {0};
 uint8_t salt[MAX_SALT_KEY_LEN]   = {0};
 uint8_t ssci_xpn[XPN_SSCI_LEN]   = {0};
+int macsec_poll_cnt = 0;
 
 /* Structure objects to know the keyword parsed and to store the pattern values */
 keyword_parsed keyword;
 macsec_store   pattern_values;
+macsec_event_status macsec_status[MAX_PORTS];
 
 static int mepa_dev_check(meba_inst_t meba_instance, mepa_port_no_t port_no) {
     if(!meba_instance->phy_devices[port_no]) {
@@ -569,7 +573,7 @@ static void file_parse_to_get_key(char *filestring)
                     j++;
                }
                else {
-                   value[j] = value[j] * 10 + (myString[i] - 48);
+                   value[j] = value[j] * DIGIT_TO_NUMBER + (myString[i] - NUMBER_ASCII_TO_DECIMAL);
                }
             }
 	    if(found_buf) {
@@ -593,7 +597,6 @@ static void cli_cmd_tx_sa_create(cli_req_t *req)
 {
     mepa_rc rc;
     macsec_configuration *mreq = req->module_req;
-    int file_opened = 0;
     char filename[100];
     mepa_macsec_secy_conf_t secy_conf_get;
     mepa_macsec_ssci_t ssci;
@@ -604,26 +607,29 @@ static void cli_cmd_tx_sa_create(cli_req_t *req)
     uint32_t next_pn_nxpn;
     char myString[MAX_STRING_LEN];
     char filestring[MAX_WORD_COUNT];
-    char file_location[] = "/root/mepa_scripts/";
+    char file_location[] = "/root/";
     cli_printf("\n\n");
     cli_printf("\td - Default File for MACsec SAK \"macsec_key.json\"");
     cli_printf("\n\tEnter MACsec SAK File Name default(press d) or enter file name : ");
+    memset(filename, 0, sizeof(filename));
     scanf("%s", filename);
 
     if ((strlen(filename) == 1) && (filename[0] == 'd' || filename[0] == 'D')) {
-        strcat(file_location, "macsec_key.json");
+        strcat(file_location, "mepa_scripts/macsec_key.json");
     } else {
+        if(strcmp(&filename[strlen(filename) - 5], ".json") != 0) {
+            T_E("\n File should be in .json formate \n");
+            return;
+        }
         strcat(file_location, filename);
     }
-
+    memset(filestring, 0, sizeof(filestring));
     if ((fptr = fopen(file_location, "r")) != NULL) {
-        file_opened = 1;
         while(fgets(myString, sizeof(myString), fptr)) {
             strcat(filestring, myString);
         }
         fclose(fptr);
-    }
-    if(file_opened == 0) {
+    } else{
         T_E("\n Error in opening the %s file .......\n", file_location);
         return;
     }        
@@ -642,6 +648,11 @@ static void cli_cmd_tx_sa_create(cli_req_t *req)
     sak.len = MAX_KEY_LEN;
     memcpy(ssci.buf, ssci_xpn, sizeof(ssci_xpn));
 
+    /*Assigning Global Variables to Zero */
+    memset(key, 0, sizeof(key));
+    memset(h_key, 0, sizeof(h_key));
+    memset(salt, 0, sizeof(salt));
+    memset(ssci_xpn, 0, sizeof(ssci_xpn));
     if ((rc = mepa_macsec_secy_conf_get(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &secy_conf_get)) != MEPA_RC_OK) {
         T_E("\n Error in getting the SecY Config on port : %d \n", req->port_no);
         return;
@@ -677,7 +688,6 @@ static void cli_cmd_rx_sa_create(cli_req_t *req)
 {
     mepa_rc rc;
     macsec_configuration *mreq = req->module_req;
-    int file_opened = 0;
     char filename[100];
     mepa_macsec_pkt_num_t next_pkt;
     mepa_macsec_ssci_t ssci;
@@ -688,26 +698,29 @@ static void cli_cmd_rx_sa_create(cli_req_t *req)
     uint32_t lowest_pn_nxpn;
     char myString[MAX_STRING_LEN];
     char filestring[MAX_WORD_COUNT];
-    char file_location[] = "/root/mepa_scripts/";
+    char file_location[] = "/root/";
     cli_printf("\n\n");
     cli_printf("\td - Default File for MACsec SAK \"macsec_key.json\"");
     cli_printf("\n\tEnter MACsec SAK File Name default(press d) or enter file name : ");
+    memset(filename, 0, sizeof(filename));
     scanf("%s", filename);
 
     if ((strlen(filename) == 1) && (filename[0] == 'd' || filename[0] == 'D')) {
-        strcat(file_location, "macsec_key.json");
+        strcat(file_location, "mepa_scripts/macsec_key.json");
     } else {
+        if(strcmp(&filename[strlen(filename) - 5], ".json") != 0) {
+            T_E("\n File should be in .json formate \n");
+            return;
+        }
         strcat(file_location, filename);
     }
-
+    memset(filestring, 0, sizeof(filestring));
     if ((fptr = fopen(file_location, "r")) != NULL) {
-        file_opened = 1;
         while(fgets(myString, sizeof(myString), fptr)) {
             strcat(filestring, myString);
         }
         fclose(fptr);
-    }
-    if(file_opened == 0) {
+    } else {
         T_E("\n Error in opening %s file .......\n", file_location);
         return;
     }
@@ -734,6 +747,12 @@ static void cli_cmd_rx_sa_create(cli_req_t *req)
     memcpy(sak.salt.buf, salt, sizeof(salt));
     sak.len = MAX_KEY_LEN;
     memcpy(ssci.buf, ssci_xpn, sizeof(ssci_xpn));
+
+    /*Assigning Global Variables to Zero */
+    memset(key, 0, sizeof(key));
+    memset(h_key, 0, sizeof(h_key));
+    memset(salt, 0, sizeof(salt));
+    memset(ssci_xpn, 0, sizeof(ssci_xpn));
 
     if(secy_conf_get.current_cipher_suite == MEPA_MACSEC_CIPHER_SUITE_GCM_AES_XPN_256) {
         next_pkt.xpn = mreq->lowest_pn;
@@ -926,6 +945,7 @@ static void cli_cmd_macsec_tx_sc_statistics(cli_req_t *req)
             T_E("\n Error in Clearing the Transmit Secure Channel Statistics on port : %d \n", req->port_no);
             return;
         }
+	cli_printf("\n TX SC Statistics Cleared on Port : %d \n", req->port_no);
         return;
     }
     mepa_macsec_tx_sc_counters_t counters;
@@ -958,6 +978,7 @@ static void cli_cmd_macsec_tx_sa_statistics(cli_req_t *req)
             T_E("\n Error in Clearing the Transmit Secure Association Statistics on port : %d \n", req->port_no);
             return;
         }
+	cli_printf("\n TX SA Statistics Cleared on Port : %d with AN %d\n", req->port_no, mreq->an_no);
         return;
     }
     mepa_macsec_tx_sa_counters_t counters;
@@ -1001,6 +1022,7 @@ static void cli_cmd_macsec_rx_sc_statistics(cli_req_t *req)
             T_E("\n Error in Clearing the Receive Secure Channel Statistics on port : %d \n", req->port_no);
             return;
         }
+        cli_printf("\n RX SC Statistics Cleared on Port : %d \n", req->port_no);	
         return;
     }
     mepa_macsec_rx_sc_counters_t counters;
@@ -1047,6 +1069,7 @@ static void cli_cmd_macsec_rx_sa_statistics(cli_req_t *req)
             T_E("\n Error in Clearing the Receive Secure Association Statistics on port : %d \n", req->port_no);
             return;
         }
+	cli_printf("\n RX SA Statistics Cleared on Port : %d with AN %d\n", req->port_no, mreq->an_no);
         return;
     }
     mepa_macsec_rx_sa_counters_t counters;
@@ -1085,6 +1108,7 @@ static void cli_cmd_macsec_mac_statistics(cli_req_t *req)
                 return;
             }
         }
+	cli_printf("\n %s Counters cleared on Port : %d\n", mreq->hmac_counters ? "HMAC" : "LMAC", req->port_no);
         return;
     }
     mepa_macsec_mac_counters_t counters;
@@ -1128,12 +1152,503 @@ static void cli_cmd_macsec_mac_statistics(cli_req_t *req)
     return;
 }
 
+static void cli_cmd_macsec_vlan_bypass(cli_req_t *req)
+{
+    mepa_rc rc;
+    macsec_configuration *mreq = req->module_req;
+    if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
+        printf(" Dev is Not Created for the port : %d\n", req->port_no);
+        return;
+    }
+
+    mepa_macsec_bypass_mode_t bypass_mode = {
+        .mode             = MEPA_MACSEC_BYPASS_TAG,
+        .hdr_bypass_len   = 0,
+        .hdr_etype        = 0,
+    };
+    if ((rc = mepa_macsec_bypass_mode_set(meba_macsec_instance->phy_devices[req->port_no], req->port_no, &bypass_mode)) != MEPA_RC_OK) {
+         T_E("\n Error in Configuring VLAN Bypass Configuring : %d \n", req->port_no);
+         return;
+    }
+
+    mepa_macsec_tag_bypass_t tag;
+    switch(mreq->vlan_tag) {
+    case 0:
+        tag = MEPA_MACSEC_BYPASS_TAG_ZERO;
+        break;
+    case 1:
+        tag = MEPA_MACSEC_BYPASS_TAG_ONE;
+        break;
+    case 2:
+        tag = MEPA_MACSEC_BYPASS_TAG_TWO;
+        break;
+    case 3:
+        tag = MEPA_MACSEC_BYPASS_TAG_THREE;
+        break;
+    case 4:
+        tag = MEPA_MACSEC_BYPASS_TAG_FOUR;
+        break;
+    default:
+        tag = MEPA_MACSEC_BYPASS_TAG_ZERO;
+        break;
+    }
+    mepa_macsec_port_t  macsec_port;
+    macsec_port.port_no    = req->port_no;
+    macsec_port.service_id = 0;
+    macsec_port.port_id    = mreq->port_id;
+
+    if ((rc = mepa_macsec_bypass_tag_set(meba_macsec_instance->phy_devices[req->port_no], macsec_port, tag)) != MEPA_RC_OK) {
+         T_E("\n Error in Configuring VLAN Bypass Configuring : %d \n", req->port_no);
+         return;
+    }
+    cli_printf("\n ...... VLAN Bypass Configured for %d tag on port no %d with SecY id %d......\n", mreq->vlan_tag , req->port_no, mreq->port_id);
+    return;
+}
+
+static void cli_cmd_macsec_frame_capt(cli_req_t *req)
+{
+    mepa_rc rc;
+    macsec_configuration *mreq = req->module_req;
+
+    mepa_port_no_t  port_no;
+    for(int iport = 0; iport < MAX_PORTS; iport++) {
+        port_no = iport2uport(iport);
+        if (req->port_list[port_no] == 0) {
+            continue;
+        }
+        if ((rc = mepa_dev_check(meba_macsec_instance, iport)) != MEPA_RC_OK) {
+            cli_printf(" Dev is Not Created for the port : %d\n", iport);
+            return;
+        }
+        mepa_macsec_frame_capture_t frame_capt;
+        if(mreq->egress_direction) {
+            frame_capt = MEPA_MACSEC_FRAME_CAPTURE_EGRESS;
+        } else {
+            frame_capt = MEPA_MACSEC_FRAME_CAPTURE_INGRESS;
+        }
+        if ((rc = mepa_macsec_frame_capture_set(meba_macsec_instance->phy_devices[iport], iport, frame_capt)) != MEPA_RC_OK) {
+            T_E("\n Error in Configuring MACsec FIFO to Capture : %d \n", iport);
+            return;
+        }
+        cli_printf("\n ...... MACsec FIFO Enabled on port %d send packets to capture ......\n", iport);
+    }
+    return;
+}
+
+static void cli_cmd_macsec_frame_get(cli_req_t *req)
+{
+    mepa_rc rc;
+    uint32_t frame_length = 0;
+    uint8_t  frame[MEPA_MACSEC_FRAME_CAPTURE_SIZE_MAX];
+    mepa_port_no_t  port_no;
+    for(int iport = 0; iport < MAX_PORTS; iport++) {
+        port_no = iport2uport(iport);
+        if (req->port_list[port_no] == 0) {
+            continue;
+        }
+        memset(&frame, 0 ,sizeof(frame));
+        if ((rc = mepa_dev_check(meba_macsec_instance, iport)) != MEPA_RC_OK) {
+            cli_printf(" Dev is Not Created for the port : %d\n", iport);
+            return;
+        }
+        if ((rc = mepa_macsec_frame_get(meba_macsec_instance->phy_devices[iport], iport, MEPA_MACSEC_FRAME_CAPTURE_SIZE_MAX, &frame_length, &frame[0])) != MEPA_RC_OK) {
+            T_E("\n Error in Reading the Frame from MACsec FIFO on port : %d \n", iport);
+            return;
+        }
+        cli_printf("\n Frame Captured on Port %d", iport);
+        cli_printf("\n===============================================\n\n");
+        cli_printf("\n\n Length of Frame Captured : %d\n", frame_length);
+        for(int j = 0; j < frame_length; j++) {
+            if(j%16 == 0) {
+                cli_printf("\n0x");
+                cli_printf("%-3x|", j);
+            }
+            if(j%8 == 0) {
+                cli_printf(" ");
+            }
+            cli_printf("%02x ", frame[j]);
+        }
+        cli_printf("\n\n\n");
+    }
+    return;
+}
+
+static void macsec_poll(meba_inst_t inst)
+{
+    mepa_port_no_t port_no;
+    mepa_macsec_event_t evt_mask;
+    mepa_macsec_event_t evt_get;
+    mepa_rc rc;
+    for (port_no = 0; port_no < MAX_PORTS; port_no++) {
+        if ((rc = mepa_dev_check(meba_macsec_instance, port_no)) != MEPA_RC_OK) {
+             memset(&macsec_status[port_no], 0 ,sizeof(macsec_status[port_no]));
+             continue;
+        }
+        mepa_macsec_init_t init_get;
+        if ((rc = mepa_macsec_init_get(meba_macsec_instance->phy_devices[port_no], &init_get)) != MEPA_RC_OK) {
+            memset(&macsec_status[port_no], 0 ,sizeof(macsec_status[port_no]));
+            continue;
+        }
+        if(init_get.enable != TRUE) {
+            memset(&macsec_status[port_no], 0 ,sizeof(macsec_status[port_no]));
+            continue;
+        }
+        if ((rc = mepa_macsec_event_enable_get(meba_macsec_instance->phy_devices[port_no], port_no, &evt_get)) != MEPA_RC_OK) {
+            T_E("\n Error in Polling the MACsec Events on port : %d \n", port_no);
+            return;
+        }
+        switch(evt_get) {
+        case MEPA_MACSEC_SEQ_THRESHOLD_EVENT:
+            macsec_status[port_no].seq_thres_event = 1;
+            break;
+        case MEPA_MACSEC_SEQ_ROLLOVER_EVENT:
+            macsec_status[port_no].rollover_event = 1;
+            break;
+        case MEPA_MACSEC_SEQ_ALL:
+            macsec_status[port_no].rollover_event = 1;
+            macsec_status[port_no].seq_thres_event = 1;
+            break;
+        default:
+            macsec_status[port_no].rollover_event = 0;
+            macsec_status[port_no].seq_thres_event = 0;
+            break;
+        }
+        if ((rc = mepa_macsec_event_poll(meba_macsec_instance->phy_devices[port_no], port_no, &evt_mask)) != MEPA_RC_OK) {
+            T_E("\n Error in Polling the MACsec Events on port : %d \n", port_no);
+            return;
+        }
+        switch(evt_mask) {
+        case MEPA_MACSEC_SEQ_THRESHOLD_EVENT:
+            macsec_status[port_no].seq_thres_status = 1;
+            break;
+        case MEPA_MACSEC_SEQ_ROLLOVER_EVENT:
+            macsec_status[port_no].rollover_status = 1;
+            break;
+        case MEPA_MACSEC_SEQ_ALL:
+            macsec_status[port_no].rollover_status = 1;
+            macsec_status[port_no].seq_thres_status = 1;
+            break;
+        default:
+            macsec_status[port_no].rollover_status = 0;
+            macsec_status[port_no].seq_thres_status = 0;
+            break;
+        }
+    }
+    macsec_poll_cnt++;
+    if(macsec_poll_cnt == 5) {
+        for (port_no = 0; port_no < MAX_PORTS; port_no++) {
+            if(macsec_status[port_no].rollover_status == 1) {
+                cli_printf("Packet number rollover event Ocuured on port no : %d\n", port_no);
+            }
+            if(macsec_status[port_no].seq_thres_status == 1) {
+                cli_printf("Sequence Number Threshold Packet Number Reached on port no : %d\n", port_no);
+            }
+        }
+        macsec_poll_cnt = 0;
+    }
+    return;
+}
+
+static void cli_cmd_macsec_event_set(cli_req_t *req)
+{
+    mepa_rc rc;
+    macsec_configuration *mreq = req->module_req;
+    mepa_port_no_t  port_no;
+    for(int iport = 0; iport < MAX_PORTS; iport++) {
+        port_no = iport2uport(iport);
+        if (req->port_list[port_no] == 0) {
+            continue;
+        }
+        if ((rc = mepa_dev_check(meba_macsec_instance, iport)) != MEPA_RC_OK) {
+            cli_printf(" Dev is Not Created for the port : %d\n", iport);
+            return;
+        }
+        mepa_macsec_event_t event;
+        event = MEPA_MACSEC_SEQ_NONE;
+        if(mreq->rollover_event) {
+            event = MEPA_MACSEC_SEQ_ROLLOVER_EVENT;
+        }
+        if(mreq->sequence_threshold_event) {
+            event = MEPA_MACSEC_SEQ_THRESHOLD_EVENT;
+        }
+
+        if ((rc = mepa_macsec_event_enable_set(meba_macsec_instance->phy_devices[iport], iport, event, mreq->enable)) != MEPA_RC_OK) {
+            T_E("\n Error in Configuring MACsec Event on Port : %d \n", iport);
+            return;
+        }
+    }
+    return;
+}
+
+static void cli_cmd_macsec_event_get(cli_req_t *req)
+{
+    mepa_port_no_t port_no;
+    cli_printf("\nPort No   Rollover event     Threshold event   Rollover Status    Threshold Status\n");
+    cli_printf("--------------------------------------------------------------------------------------\n");
+    for(int iport = 0; iport < MAX_PORTS; iport++) {
+        port_no = iport2uport(iport);
+        cli_printf("%-10d%-19s%-18s",port_no, cli_enable_txt(macsec_status[iport].rollover_event), cli_enable_txt(macsec_status[iport].seq_thres_event));
+        if(macsec_status[iport].rollover_event == 0) {
+            cli_printf(" %-17s", cli_enable_txt(3));
+        } else {
+            cli_printf("%-17s", cli_enable_txt(macsec_status[iport].rollover_status + 4));
+        }
+        if(macsec_status[iport].seq_thres_event == 0) {
+            cli_printf(" %-17s", cli_enable_txt(3));
+        } else {
+            cli_printf("%-17s", cli_enable_txt(macsec_status[iport].seq_thres_status + 4));
+        }
+        cli_printf("\n");
+    }
+    cli_printf("\n\n");
+    return;
+}
+
+static void cli_cmd_macsec_seq_num_set(cli_req_t *req)
+{
+    mepa_rc rc;
+    macsec_configuration *mreq = req->module_req;
+    uint32_t threshold;
+    mepa_port_no_t  port_no;
+    for(int iport = 0; iport < MAX_PORTS; iport++) {
+        port_no = iport2uport(iport);
+        if (req->port_list[port_no] == 0) {
+            continue;
+        }
+        if(mreq->statistics_get) {
+            if ((rc = mepa_macsec_event_seq_threshold_get(meba_macsec_instance->phy_devices[iport], iport, &threshold)) != MEPA_RC_OK) {
+                T_E("\n Error in getting the Seq number Threshold on Port : %d \n", iport);
+                return;
+            }
+            cli_printf("\n Sequence Number threshold on port %d is    : %d\n", iport, threshold);
+        } else {
+           if(mreq->seq_threshold_value == 0) {
+               T_E("\n Sequence Threshold Value Cannot be zero configure value on port : %d \n", iport);
+               return;
+           }
+           if ((rc = mepa_macsec_event_seq_threshold_set(meba_macsec_instance->phy_devices[iport], iport, mreq->seq_threshold_value)) != MEPA_RC_OK) {
+               T_E("\n Error in Configuring the Seq number Threshold on Port : %d \n", iport);
+               return;
+           }
+        }
+    }
+    return;
+}
+
+static void cli_cmd_macsec_conf_get(cli_req_t *req)
+{
+    mepa_rc rc;
+    macsec_configuration *mreq = req->module_req;
+    mepa_macsec_secy_conf_t secy_conf_get;
+    mepa_macsec_tx_sc_conf_t tx_sc_conf_get;
+    mepa_macsec_sak_t   sak;
+    mepa_macsec_sci_t sci;
+    mepa_macsec_rx_sc_conf_t  rx_sc_conf;
+    uint32_t next_pn = 0;
+    mepa_bool_t conf = 0;
+    mepa_bool_t active;
+    if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
+        printf(" Dev is Not Created for the port : %d\n", req->port_no);
+        return;
+    }
+
+    mepa_macsec_port_t  macsec_port;
+    macsec_port.port_no    = req->port_no;
+    macsec_port.service_id = 0;
+    macsec_port.port_id    = mreq->port_id;
+
+    switch(mreq->conf_get) {
+    case MACSEC_SECY_CONF_GET:
+        if ((rc = mepa_macsec_secy_conf_get(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &secy_conf_get)) != MEPA_RC_OK) {
+            T_E("\n Error in getting the SecY on port : %d \n", req->port_no);
+            return;
+        }
+        cli_printf("\n\nSecY Configuration for port no %d with port id %d \n", req->port_no, mreq->port_id);
+        cli_printf("=============================================================\n");
+        cli_printf("%-25s :","Frame Validation");
+        switch(secy_conf_get.validate_frames) {
+        case MEPA_MACSEC_VALIDATE_FRAMES_CHECK:
+            cli_printf(" Check\n");
+            break;
+        case MEPA_MACSEC_VALIDATE_FRAMES_STRICT:
+           cli_printf(" Strict\n");
+           break;
+        default:
+           cli_printf(" Disabled\n");
+           break;
+        }
+        cli_printf("%-25s : %s\n","Replay protect", secy_conf_get.replay_protect ? "Enabled" : "Disabled");
+        cli_printf("%-25s : %d\n","Replay Window", secy_conf_get.replay_window);
+        cli_printf("%-25s : %s\n","Protect frames", secy_conf_get.protect_frames ? "Enabled" : "Disabled");
+        cli_printf("%-25s : %s\n","always_include_sci", secy_conf_get.always_include_sci ? "Enabled" : "Disabled");
+        cli_printf("%-25s : %s\n","use_es", secy_conf_get.use_es ? "Enabled" : "Disabled");
+        cli_printf("%-25s : %s\n","use_scb", secy_conf_get.use_scb ? "Enabled" : "Disabled");
+        cli_printf("%-25s : %d\n","confidentiality_offset", secy_conf_get.confidentiality_offset);
+        cli_printf("%-25s :","Cipher suit");
+        switch(secy_conf_get.current_cipher_suite) {
+        case MEPA_MACSEC_CIPHER_SUITE_GCM_AES_128:
+            cli_printf(" NON-XPN AES-128\n");
+            break;
+        case MEPA_MACSEC_CIPHER_SUITE_GCM_AES_256:
+            cli_printf(" NON-XPN AES- 256\n");
+            break;
+        case MEPA_MACSEC_CIPHER_SUITE_GCM_AES_XPN_128:
+            cli_printf(" AES -XPN -128\n");
+            break;
+        default:
+           cli_printf(" AES-XPN-256\n");
+           break;
+        }
+        cli_printf("%-25s : 0x%x-0x%x-0x%x-0x%x-0x%x-0x%x\n","Mac Add", secy_conf_get.mac_addr.addr[0], secy_conf_get.mac_addr.addr[1],secy_conf_get.mac_addr.addr[2],
+                   secy_conf_get.mac_addr.addr[3], secy_conf_get.mac_addr.addr[4], secy_conf_get.mac_addr.addr[5]);
+        break;
+    case MACSEC_TX_SC_CONF_GET:
+        if ((rc = mepa_macsec_tx_sc_get_conf(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &tx_sc_conf_get)) != MEPA_RC_OK) {
+            T_E("\n Error in getting the Tx SC Conf on port : %d \n", req->port_no);
+            return;
+        }
+        cli_printf("Tx Secure Channel Configuration for port no %d with port id %d \n", req->port_no, mreq->port_id);
+        cli_printf("=======================================================================\n");
+        cli_printf("%-25s : %s\n","Protect frames", tx_sc_conf_get.protect_frames ? "Enabled" : "Disabled");
+        cli_printf("%-25s : %s\n","always_include_sci", tx_sc_conf_get.always_include_sci ? "Enabled" : "Disabled");
+        cli_printf("%-25s : %s\n","use_es", tx_sc_conf_get.use_es ? "Enabled" : "Disabled");
+        cli_printf("%-25s : %s\n","use_scb", tx_sc_conf_get.use_scb ? "Enabled" : "Disabled");
+        cli_printf("%-25s : %d\n","confidentiality_offset", tx_sc_conf_get.confidentiality_offset);
+        break;
+    case MACSEC_TX_SA_CONF_GET:
+        if ((rc = mepa_macsec_tx_sa_get(meba_macsec_instance->phy_devices[req->port_no], macsec_port, mreq->an_no, &next_pn, &conf, &sak, &active)) != MEPA_RC_OK) {
+            T_E("\n Error in getting the SecY on port : %d \n", req->port_no);
+            return;
+        }
+        cli_printf("Tx Secure Association Configuration for port no %d with port id %d \n", req->port_no, mreq->port_id);
+        cli_printf("=============================================================================\n");
+        cli_printf("%-25s : %d\n","Next Pn", next_pn);
+        cli_printf("%-25s : %s\n","confidentiality", conf ? "Enabled":"Disabled");
+        cli_printf("%-25s : %s\n","Active", active ? "Yes" : "No");
+        cli_printf("%-25s :", "Key");
+        for(int i = 0; i < 32; i++) {
+            cli_printf(" %d,", sak.buf[i]);
+        }
+        cli_printf("\n%-25s :", "Hash Key");
+        for(int i = 0; i < 16; i++) {
+            cli_printf(" %d,", sak.h_buf[i]);
+        }
+        cli_printf("\n%-25s :", "Salt");
+        for(int i = 0; i < 12; i++) {
+            cli_printf(" %d,", sak.salt.buf[i]);
+        }
+        cli_printf("\n");
+        break;
+    case MACSEC_RX_SC_CONF_GET:
+
+        if ((rc = mepa_macsec_secy_conf_get(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &secy_conf_get)) != MEPA_RC_OK) {
+            T_E("\n Error in getting the SecY on port : %d \n", req->port_no);
+            return;
+        }
+
+        memcpy(&sci.mac_addr, &secy_conf_get.mac_addr, sizeof(mepa_mac_t));
+        sci.port_id = mreq->rx_sc_id;
+        cli_printf("Rx Secure Channel Configuration for port no %d with port id %d and channel id %d\n", req->port_no, mreq->port_id, mreq->rx_sc_id);
+        cli_printf("=================================================================================================\n");
+        if ((rc = mepa_macsec_rx_sc_get_conf(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &sci, &rx_sc_conf)) != MEPA_RC_OK) {
+            T_E("\n Error in getting the SecY on port : %d \n", req->port_no);
+            return;
+        }
+        cli_printf("%-25s :","Frame Validation");
+        switch(rx_sc_conf.validate_frames) {
+        case MEPA_MACSEC_VALIDATE_FRAMES_CHECK:
+            cli_printf(" Check\n");
+            break;
+        case MEPA_MACSEC_VALIDATE_FRAMES_STRICT:
+           cli_printf(" Strict\n");
+           break;
+        default:
+           cli_printf(" Disabled\n");
+           break;
+        }
+        cli_printf("%-25s : %s\n","Replay protect", rx_sc_conf.replay_protect ? "Enabled" : "Disabled");
+        cli_printf("%-25s : %d\n","Replay Window", rx_sc_conf.replay_window);
+        cli_printf("%-25s : %d\n","confidentiality_offset", rx_sc_conf.confidentiality_offset);
+        break;
+    case MACSEC_RX_SA_CONF_GET:
+
+        if ((rc = mepa_macsec_secy_conf_get(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &secy_conf_get)) != MEPA_RC_OK) {
+            T_E("\n Error in getting the SecY on port : %d \n", req->port_no);
+            return;
+        }
+
+        memcpy(&sci.mac_addr, &secy_conf_get.mac_addr, sizeof(mepa_mac_t));
+        sci.port_id = mreq->rx_sc_id;
+        if ((rc = mepa_macsec_rx_sa_get(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &sci, mreq->an_no, &next_pn, &sak, &active)) != MEPA_RC_OK) {
+            T_E("\n Error in getting the SecY on port : %d \n", req->port_no);
+            return;
+        }
+        cli_printf("Rx Secure Channel Configuration for port no %d with port id %d and channel id %d and an = %d\n", req->port_no, mreq->port_id, mreq->rx_sc_id,
+                   mreq->an_no);
+        cli_printf("====================================================================================================================\n");
+        cli_printf("%-25s : %d\n","Lowest Pn", next_pn);
+        cli_printf("%-25s : %s\n","Active", active ? "Yes" : "No");
+        cli_printf("%-25s :", "Key");
+        for(int i = 0; i < MAX_KEY_LEN; i++) {
+            cli_printf(" %d,", sak.buf[i]);
+        }
+        cli_printf("\n%-25s :", "Hash Key");
+        for(int i = 0; i < MAX_HASK_KEY_LEN; i++) {
+            cli_printf(" %d,", sak.h_buf[i]);
+        }
+        cli_printf("\n%-25s :", "Salt");
+        for(int i = 0; i < MAX_SALT_KEY_LEN; i++) {
+            cli_printf(" %d,", sak.salt.buf[i]);
+        }
+        cli_printf("\n");
+        break;
+    default:
+        break;
+    }
+    return;
+}
+
+static void cli_cmd_macsec_cmds()
+{
+    cli_printf("\n\n");
+    cli_printf("\n\033[1;32m%-20s%-80s%s\033[0m\n","  Commands", " Arguments","  Description");
+    cli_printf("\033[1;32m==================================================================================================================================\033[0m\n");
+    cli_printf("\n %-20s| %-80s| %s", "exit_macsec", "", "Exit from MACsec Application");
+    cli_printf("\n %-20s| %-80s| %s", "macsec port_state", "", "Provides MACsec Capability and MACsec State of all Ports");
+    cli_printf("\n %-20s| %-80s| %s", "macsec enable", " <port_list> [bypass_none|bypass_disable]", "Enables MACsec Block");
+    cli_printf("\n %-20s| %-80s| %s", "macsec disable", "<port_list> [bypass_none|bypass_enable]", "Disables MACsec Block");
+    cli_printf("\n %-20s| %-80s| %s", "secy_del", "<port_no> port-id <port_id>", "Deletes available Secure Entity");
+    cli_printf("\n %-20s| %-80s| %s", "tx_sc_create", "<port_no> port-id <port_id>", "Transmit Secure Channel Create");
+    cli_printf("\n %-20s| %-80s| %s", "rx_sc_create", "<port_no> port-id <port_id> sc-id <id>", "Receive Secure Channel Create");
+    cli_printf("\n %-20s| %-80s| %s", "tx_sc_del", "<port_no> port-id <port_id>", "transmit Secure Channel Delete");
+    cli_printf("\n %-20s| %-80s| %s", "rx_sc_del", "<port_no> port-id <port_id> sc-id <id>", "Receive Secure Channel Delete");
+    cli_printf("\n %-20s| %-80s| %s", "tx_sa_create", "<port_no> port-id <port_id> an <an_no> next-pn <pn> conf [true|false]", "Transmit Secure Association Create");
+    cli_printf("\n %-20s| %-80s| %s", "rx_sa_create", "<port_no> port-id <port_id> sc-id <id> an <an_no> lowest-pn <pn>", "Receive Secure Association Create");
+    cli_printf("\n %-20s| %-80s| %s", "tx_sa_del", "<port_no> port-id <port_id> an <an_no>", "Transmit Secure Association Delete");
+    cli_printf("\n %-20s| %-80s| %s", "rx_sa_del", "<port_no> port-id <port_id> sc-id <id>", "Receive Secure Association Delete");
+    cli_printf("\n %-20s| %-80s| %s", "rx_sa_pn_upd", "<port_no> port-id <port_id> sc-id <id> an <an_no> lowest-pn <pn>", "Receive SA Lowest PN Update");
+    cli_printf("\n %-20s| %-80s| %s", "statistics secy", "<port_no> port-id <port_id> [get|clear]", "SecY Staticstics Get or Clear");
+    cli_printf("\n %-20s| %-80s| %s", "statistics tx_sc", "<port_no> port-id <port_id> [get|clear]", "Tx Secure Channel Statistics Get or Clear");
+    cli_printf("\n %-20s| %-80s| %s", "statistics tx_sa", "<port_no> port-id <port_id> an <an_no> [get|clear]", "Tx Secure Association Statistics Get or Clear");
+    cli_printf("\n %-20s| %-80s| %s", "statistics rx_sc", "<port_no> port-id <port_id> sc-id <id> [get|clear]", "Rx Secure Channel Statistics Get or Clear");
+    cli_printf("\n %-20s| %-80s| %s", "statistics rx_sa","<port_no> port-id <port_id> sc-id <id> an <an_no> [get|clear]","Rx SA Statistics Get or Clear");
+    cli_printf("\n %-20s| %-80s| %s", "statistics mac", "[hmac|lmac] <port_no> [get|clear]", "HMAC/LMAC Statistics Get or Clear");
+    cli_printf("\n %-20s| %-80s| %s", "vlan_bypass", "<port_no> port-id <port_id> [zero|one|two|three|four]", "Vlan Tag Bypass Configuration");
+    cli_printf("\n %-20s| %-80s| %s", "frame capture", "<port_list> [egress|ingress]", "MACsec FIFO Frame Capture Configuration");
+    cli_printf("\n %-20s| %-80s| %s", "frame get", "<port_list>", "MACsec FIFO Captured Frame Get");
+    cli_printf("\n %-20s| %-80s| %s", "macsec event set", "<port_list> [rollover|seq_threshold] [evt_enable|evt_disable]", "MACsec Event Enable or Disable");
+    cli_printf("\n %-20s| %-80s| %s", "macsec event get", "", "MACsec Event Status of all Ports");
+    cli_printf("\n %-20s| %-80s| %s", "macsec seq_threshold", "[get|set] <port_list> [<threshold_val>]", "MACsec Sequence Thresold Val Set or Get");
+    return;
+}
 
 static void cli_cmd_macsec_demo(cli_req_t *req)
 {
     cli_printf("\n\t\t\t\t \033[1;31m ================================================================================================================\033[0m\n");
     cli_printf("\t\t\t\t\t  \t\t\t\t \033[1;31mMACSEC DEMO APPLICATION\033[0m\n");
     cli_printf("\n\t\t\t\t  \033[1;31m================================================================================================================\033[0m\n");
+    cli_printf("\n\n");
+    cli_cmd_macsec_cmds();
     return;
 }
 
@@ -1394,13 +1909,87 @@ static int cli_cmd_stats_get_clear(cli_req_t *req)
     if (!strncasecmp(req->cmd, KEYWORD_GET, strlen(req->cmd))) {
         mreq->statistics_get = 1;
     }
-
-    if (!strncasecmp(req->cmd, KEYWORD_CLEAR, strlen(req->cmd))) {
+    else if (!strncasecmp(req->cmd, KEYWORD_CLEAR, strlen(req->cmd))) {
+        mreq->statistics_get = 0;
+    }
+    else if (!strncasecmp(req->cmd, KEYWORD_SET, strlen(req->cmd))) {
         mreq->statistics_get = 0;
     }
 
     return 0;
 }
+
+static int cli_cmd_parse_vlan(cli_req_t *req)
+{
+    macsec_configuration *mreq = req->module_req;
+    if (!strncasecmp(req->cmd, KEYWORD_VLAN_ZERO, strlen(req->cmd))) {
+        mreq->vlan_tag = 0;
+    }
+    else if (!strncasecmp(req->cmd, KEYWORD_VLAN_ONE, strlen(req->cmd))) {
+        mreq->vlan_tag = 1;
+    }
+    else if (!strncasecmp(req->cmd, KEYWORD_VLAN_TWO, strlen(req->cmd))) {
+        mreq->vlan_tag = 2;
+    }
+    else if (!strncasecmp(req->cmd, KEYWORD_VLAN_THREE, strlen(req->cmd))) {
+        mreq->vlan_tag = 3;
+    }
+    else if (!strncasecmp(req->cmd, KEYWORD_VLAN_FOUR, strlen(req->cmd))) {
+        mreq->vlan_tag = 4;
+    }
+    return 0;
+}
+
+static int cli_cmd_event_ena_dis(cli_req_t *req)
+{
+    macsec_configuration *mreq = req->module_req;
+
+    if (!strncasecmp(req->cmd, KEYWORD_EVT_ENABLE, strlen(req->cmd))) {
+        mreq->enable = 1;
+    } else {
+        mreq->enable = 0;
+    }
+    return 0;
+}
+
+static int cli_cmd_event_parse(cli_req_t *req)
+{
+    macsec_configuration *mreq = req->module_req;
+    
+    if (!strncasecmp(req->cmd, KEYWORD_ROLLOVER_EVT, strlen(req->cmd))) {
+        mreq->rollover_event = 1;
+    } else {
+        mreq->rollover_event = 0;
+    }
+
+    if (!strncasecmp(req->cmd, KEYWORD_SEQ_THRE_EVT, strlen(req->cmd))) {
+        mreq->sequence_threshold_event = 1;
+    } else {
+        mreq->sequence_threshold_event = 0;
+    }
+    return 0;
+}
+
+static int cli_cmd_macsec_param_conf_get(cli_req_t *req)
+{
+    macsec_configuration *mreq = req->module_req;
+
+    if (!strncasecmp(req->cmd, KEYWORD_SECY_GET, strlen(req->cmd))) {
+        mreq->conf_get = MACSEC_SECY_CONF_GET;
+    } else if (!strncasecmp(req->cmd, KEYWORD_TX_SC_GET, strlen(req->cmd))) {
+        mreq->conf_get = MACSEC_TX_SC_CONF_GET;
+    } else if (!strncasecmp(req->cmd, KEYWORD_TX_SA_GET, strlen(req->cmd))) {
+        mreq->conf_get = MACSEC_TX_SA_CONF_GET;
+    } else if (!strncasecmp(req->cmd, KEYWORD_RX_SC_GET, strlen(req->cmd))) {
+        mreq->conf_get = MACSEC_RX_SC_CONF_GET;
+    } else if (!strncasecmp(req->cmd, KEYWORD_RX_SA_GET, strlen(req->cmd))) {
+        mreq->conf_get = MACSEC_RX_SA_CONF_GET;
+    } else {
+        mreq->conf_get = MACSEC_CONF_GET_NONE;
+    }
+    return 0;
+}
+
 
 static cli_cmd_t cli_cmd_macsec_table[] = {
     {
@@ -1408,6 +1997,12 @@ static cli_cmd_t cli_cmd_macsec_table[] = {
         "Exit MACsec Demo Application",
         cli_cmd_macsec_demo,
     },
+
+    {
+        "?",
+        "Lists the Available MACsec Commands",
+         cli_cmd_macsec_cmds,
+    }, 
 
     {
         "macsec enable <port_list> [bypass_none|bypass_disable]",
@@ -1540,6 +2135,48 @@ static cli_cmd_t cli_cmd_macsec_table[] = {
         "Get or Clear HOST/LINE MAC Statistics",
         cli_cmd_macsec_mac_statistics,
     },
+
+    {
+        "vlan_bypass <port_no> port-id <port_id> [zero|one|two|three|four]",
+        "Configures the Number of VLAN needs to be Bypassed",
+        cli_cmd_macsec_vlan_bypass,
+    },
+
+    {
+        "frame capture <port_list> [egress|ingress]",
+        "Enable MACsec FIFO to Capture the Frame",
+        cli_cmd_macsec_frame_capt,
+    },
+
+    {
+        "frame get <port_list>",
+        "Read the frame captured in MACsec FIFO",
+        cli_cmd_macsec_frame_get,
+    },
+
+    {
+        "macsec event set <port_list> [rollover|seq_threshold] [evt_enable|evt_disable]",
+        "MACsec Event Configuration",
+        cli_cmd_macsec_event_set,
+    },
+
+    {
+        "macsec event get",
+        "Get the Status of MACsec Events",
+        cli_cmd_macsec_event_get,
+    },
+
+    {
+        "macsec seq_threshold [get|set] <port_list> [<threshold_val>]",
+        "Set/get Packet Number threshold value for MACsec Event",
+        cli_cmd_macsec_seq_num_set,
+    },
+
+    {
+        "conf_get [secy|tx_sc|tx_sa|rx_sc|rx_sa] <port_no> port-id <port_id> sc-id <id> an <an_no>",
+        "Get the Conf of SecY/SC/SA",
+         cli_cmd_macsec_conf_get,
+    }
 };
 
 
@@ -1653,6 +2290,17 @@ static cli_parm_t cli_parm_table[] = {
     },
 
     {
+        "zero|one|two|three|four",
+        "\n\t zero : Disable VLAN Bypass\n"
+        "\t one   : Bypass one VLAN Tag\n"
+        "\t two   : Bypass two VLAN Tag\n"
+        "\t three : Bypass three VLAN Tag\n"
+        "\t four  : Bypass four VLAN Tag\n",
+        CLI_PARM_FLAG_SET,
+        cli_cmd_parse_vlan,
+    },
+
+    {
         "<match_value>",
         "Parameter Needs to be Matched",
         CLI_PARM_FLAG_SET,
@@ -1664,6 +2312,17 @@ static cli_parm_t cli_parm_table[] = {
         "Enable or Disable",
          CLI_PARM_FLAG_NO_TXT,
          cli_cmd_parse_boolean,
+    },
+
+    {
+        "secy|tx_sc|tx_sa|rx_sc|rx_sa",
+        "\n\t secy  : SecY Configuration\n"
+        "\t tx_sc : Transmit Secure Channel Configuration\n"
+        "\t tx_sa : Transmit Secure Association Configuration\n"
+        "\t rx_sc : Receive Secure Channel Configuration\n"
+        "\t rx_sa : Receive Secure Association Configuration\n",
+        CLI_PARM_FLAG_NONE,
+        cli_cmd_macsec_param_conf_get,
     },
 
     {
@@ -1692,6 +2351,37 @@ static cli_parm_t cli_parm_table[] = {
          "",
          CLI_PARM_FLAG_NO_TXT,
          cli_cmd_parse_boolean,
+    },
+
+    {
+        "rollover|seq_threshold",
+        "\n\t rollover : PN Rollover Event\n"
+        "\t seq_threshold : PN Threshold event\n",
+        CLI_PARM_FLAG_SET,
+        cli_cmd_event_parse,
+    },
+
+    {
+        "evt_enable|evt_disable",
+        "\n\t evt_enable : Enable Event\n"
+        "\t evt_disable: Disable Event\n",
+        CLI_PARM_FLAG_SET,
+        cli_cmd_event_ena_dis,
+    },
+
+    {
+        "get|set",
+        "\n\t get : Get the Value\n"
+        "\t set : Set the Value\n",
+        CLI_PARM_FLAG_SET,
+        cli_cmd_stats_get_clear,
+    },
+
+    {
+        "<threshold_val>",
+        "Packet Number",
+        CLI_PARM_FLAG_SET,
+        cli_cmd_parse_u64_param,
     },
 	
     {
@@ -1836,7 +2526,9 @@ void mepa_demo_appl_macsec_demo(mscc_appl_init_t *init)
     case MSCC_INIT_CMD_INIT:
         phy_cli_init();
         break;
-
+    case MSCC_INIT_CMD_POLL:
+        macsec_poll(init->board_inst);
+        break;
     default:
         break;
     }

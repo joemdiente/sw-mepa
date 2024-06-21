@@ -52,6 +52,26 @@
 #define KEYWORD_CLEAR           "clear"
 #define KEYWORD_HMAC            "hmac"
 #define KEYWORD_LMAC            "lmac"
+#define KEYWORD_SET             "set"
+
+/* MACsec VLAN Tag Keywords */
+#define KEYWORD_VLAN_ZERO       "zero"
+#define KEYWORD_VLAN_ONE        "one"
+#define KEYWORD_VLAN_TWO        "two"
+#define KEYWORD_VLAN_THREE      "three"
+#define KEYWORD_VLAN_FOUR       "four"
+
+/* MACsec Conf Get Keyword */
+#define KEYWORD_SECY_GET        "secy"
+#define KEYWORD_TX_SC_GET       "tx_sc"
+#define KEYWORD_TX_SA_GET       "tx_sa"
+#define KEYWORD_RX_SC_GET       "rx_sc"
+#define KEYWORD_RX_SA_GET       "rx_sa"
+
+/* MACsec Event Keywords */
+#define KEYWORD_EVT_ENABLE      "evt_enable"
+#define KEYWORD_ROLLOVER_EVT    "rollover"
+#define KEYWORD_SEQ_THRE_EVT    "seq_threshold"
 
 #define MAC_ADDRESS_LEN    17 /* Length of MAC address string in formate "XX-XX-XX-XX-XX-XX" */
 
@@ -79,6 +99,22 @@ typedef struct {
 } macsec_store;
 
 typedef struct {
+    mepa_bool_t   rollover_event;      /* Rollover Event Enabled */
+    mepa_bool_t   seq_thres_event;     /* Sequence Threshold Event Enabled */
+    mepa_bool_t   rollover_status;     /* Rollover Event Interrupt Status */
+    mepa_bool_t   seq_thres_status;    /* Sequence Threshold Event Interrupt Status */
+} macsec_event_status;
+
+typedef enum {
+    MACSEC_CONF_GET_NONE,
+    MACSEC_SECY_CONF_GET,            /* Get SecY Configuration */
+    MACSEC_TX_SC_CONF_GET,           /* Get Transmit Secure Channel Configuration */
+    MACSEC_TX_SA_CONF_GET,           /* Get Transmit Secure Association Configuration */
+    MACSEC_RX_SC_CONF_GET,           /* Get Receive Secure Channel Configuration */
+    MACSEC_RX_SA_CONF_GET,           /* Get Receive Secure Association Configuration */
+} macsec_conf_get;
+
+typedef struct {
     mepa_macsec_init_bypass_t   bypass_conf;          /* Bypass Configuration */
     mepa_bool_t                 protect_frames;       /* Frame Protection Enable or disable */
     mepa_validate_frames_t      frame_validate;       /* Frame Vlaidation Configuration */
@@ -91,6 +127,7 @@ typedef struct {
     mepa_mac_t                  pattern_src_mac_addr; /* Pattern Match SRC MAC Address */
     mepa_mac_t                  pattern_dst_mac_addr; /* pattern Match DST MAC Address */
     mepa_macsec_match_action_t  match_action;         /* Action after PAttern Matched */
+    macsec_conf_get             conf_get;             /* Configuration Get */
     uint16_t                    vid;                  /* Pattern Match VLAN ID */
     uint16_t                    vid_inner;            /* Pattern Match Inner VLAN ID */
     uint16_t                    pattern_match;        /* Parameter to be matched */
@@ -99,8 +136,12 @@ typedef struct {
     uint64_t                    next_pn;              /* Next Packet number */
     uint64_t                    lowest_pn;            /* Lowest Packet number */
     uint64_t                    seq_threshold_value;  /* Sequence Threshold packet Number */
+    uint16_t                    vlan_tag;             /* Number of VLAn Tags needs to be bypassed */
     mepa_bool_t                 conf;                 /* Confidentiality Enable */
     mepa_bool_t                 statistics_get;       /* MACsec Statistics Get or Clear */
     mepa_bool_t                 hmac_counters;        /* HMAC counters or LMAC Counters */
+    mepa_bool_t                 rollover_event;       /* MACsec Rollover Event */ 
+    mepa_bool_t                 sequence_threshold_event; /* MACsec Sequence threshold Event */
+    mepa_bool_t                 enable;               /* Event Enable or Disable */
 } macsec_configuration;
 
