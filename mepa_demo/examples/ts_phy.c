@@ -26,14 +26,11 @@ static struct {
     mesa_port_no_t           rx_port;
 } state;
 
-#define NO_EXP 0xFFFFFFFF
-#define PTP_SYNC_MESSAGE_LENGTH = 44
-#define TX_RX_FRAME_CNT 10
-#define ETH_PTP_ETYPE 0x88f7
-
-static int phy_macsec_init(const mepa_port_no_t port_no) {
+#define MACSEC_ENABLE (1)
+#define MACSEC_DISABLE (0)
+static int phy_macsec(const mepa_port_no_t port_no, const mepa_bool_t enable) {
     mepa_macsec_init_t macsec_init;
-    macsec_init.enable = 1;
+    macsec_init.enable = enable;
     macsec_init.dis_ing_nm_macsec_en = 1;
     macsec_init.mac_conf.lmac.dis_length_validate = 0;
     macsec_init.mac_conf.hmac.dis_length_validate = 0;
@@ -46,34 +43,12 @@ static int phy_macsec_init(const mepa_port_no_t port_no) {
     macsec_init.bypass = MEPA_MACSEC_INIT_BYPASS_ENABLE;
 	/* MACsec Bypass mode enabled */
     if (meba_phy_macsec_init_set(meba_global_inst, port_no, &macsec_init) != MEPA_RC_OK) {
-        cli_printf("macsec initialization port(%u) failed for disabling macsec bypass\n", port_no);
+        cli_printf("macsec initialization port(%u) failed for enabling macsec bypass\n", port_no);
         return MEPA_RC_ERROR;
     }
     return 0;
 }
 
-
-static int phy_macsec_disable(const mepa_port_no_t port_no) {
-
-    mepa_macsec_init_t macsec_init;
-    macsec_init.enable = 0;
-    macsec_init.dis_ing_nm_macsec_en = 1;
-    macsec_init.mac_conf.lmac.dis_length_validate = 0;
-    macsec_init.mac_conf.hmac.dis_length_validate = 0;
-    macsec_init.bypass = MEPA_MACSEC_INIT_BYPASS_NONE;
-    /* Init_set */
-    if(meba_phy_macsec_init_set(meba_global_inst, port_no, &macsec_init) != MEPA_RC_OK) {
-	cli_printf("macsec initialization port(%u) failed for disabling macsec\n", port_no);
-        return MEPA_RC_ERROR;
-    }
-    macsec_init.bypass = MEPA_MACSEC_INIT_BYPASS_ENABLE;
-        /* MACsec Bypass mode enabled */
-    if (meba_phy_macsec_init_set(meba_global_inst, port_no, &macsec_init) != MEPA_RC_OK) {
-        cli_printf("macsec initialization port(%u) failed for enabling macsec bypass\n", port_no);
-	return MEPA_RC_ERROR;
-    }
-    return MEPA_RC_OK;
-} 
 
 /* TS initialization ingress/egress configuration */
 static int phy_ts_egress_init(const mepa_port_no_t port_no, 
@@ -239,14 +214,14 @@ static int phy_run(int argc, const char *argv[])
 #endif
     case 1:
         cli_printf("\n\nEnabling MACSEC without spike patch:\n");
-        if(phy_macsec_init(state.tx_port) != MEPA_RC_OK) {
+        if(phy_macsec(state.tx_port, MACSEC_ENABLE) != MEPA_RC_OK) {
 	   cli_printf("\n\nError enabling MACSEC without spike patch:\n");
 	   return MEPA_RC_ERROR;
 	}
         break;
     case 2:
         cli_printf("\n\nDisabling MACSEC:\n");
-        if(phy_macsec_disable(state.tx_port) != MEPA_RC_OK) {
+        if(phy_macsec(state.tx_port, MACSEC_DISABLE) != MEPA_RC_OK) {
            cli_printf("\n\nError disabling MACSec\n");
            return MEPA_RC_ERROR;
         }
