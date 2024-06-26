@@ -908,6 +908,7 @@ static void cli_cmd_macsec_secy_statistics(cli_req_t *req)
             T_E("\n Error in Clearing the SecY Statistics on port : %d \n", req->port_no);
             return;
         }
+	cli_printf("\n SecY Statistics Cleared on Port : %d \n", req->port_no);
         return;
     }
 
