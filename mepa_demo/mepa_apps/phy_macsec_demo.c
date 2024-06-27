@@ -87,9 +87,12 @@ static mscc_appl_trace_group_t trace_groups[10] = {
 #define MAX_STRING_LEN   200       /* Max length of string in File */
 #define MAX_WORD_COUNT   1000      /* Max word count in File */
 #define MAX_KEY_LEN      32        /* SAK key length */
+#define KEY_LEN_128_BIT  16        /* Key Length for 128 bit Cipher */
+#define KEY_LEN_256_BIT  32        /* Key Length for 256 bit Cipher */
 #define MAX_HASK_KEY_LEN 16        /* SAK Hash key length */
 #define MAX_SALT_KEY_LEN 12        /* SAK Salt length for XPN */
 #define XPN_SSCI_LEN     4         /* Short Secure Channel Identifier length for XPN */
+#define VSC_PHY_MAX_CP_RULES 26    /* Maximum Control Packet Rules supported */
 
 #define MASK_16BIT       0xFFFF                 /* 16 Bit Mask value */
 #define MASK_32BIT       0xFFFFFFFF             /* 32 Bit Mask value */
@@ -150,6 +153,11 @@ static void cli_cmd_macsec_ena(cli_req_t *req)
 {
     macsec_configuration *mreq = req->module_req;
     mepa_port_no_t  port_no;
+    if(!req->set) {
+        T_E("\nInvalid Argument");
+        cli_printf("\n Syntax : %s\n", "macsec enable <port_list> [bypass_none|bypass_disable]");
+        return;
+    }
     for(int iport = 0; iport < MAX_PORTS; iport++) {
         port_no = iport2uport(iport);
         if (req->port_list[port_no] == 0) {
@@ -182,12 +190,12 @@ static void cli_cmd_macsec_ena(cli_req_t *req)
         }
         /* Default action configuration for non-matching frames */
         mepa_macsec_default_action_policy_t default_action_policy = {
-            .ingress_non_control_and_non_macsec = MEPA_MACSEC_DEFAULT_ACTION_BYPASS,
+            .ingress_non_control_and_non_macsec = MEPA_MACSEC_DEFAULT_ACTION_DROP,
             .ingress_control_and_non_macsec     = MEPA_MACSEC_DEFAULT_ACTION_BYPASS,
             .ingress_non_control_and_macsec     = MEPA_MACSEC_DEFAULT_ACTION_BYPASS,
             .ingress_control_and_macsec         = MEPA_MACSEC_DEFAULT_ACTION_BYPASS,
             .egress_control                     = MEPA_MACSEC_DEFAULT_ACTION_BYPASS,
-            .egress_non_control                 = MEPA_MACSEC_DEFAULT_ACTION_BYPASS,
+            .egress_non_control                 = MEPA_MACSEC_DEFAULT_ACTION_DROP,
         };
 
         if ((rc = mepa_macsec_default_action_set(meba_macsec_instance->phy_devices[iport], iport, &default_action_policy)) != MEPA_RC_OK) {
@@ -208,6 +216,11 @@ static void cli_cmd_macsec_dis(cli_req_t *req)
     mepa_port_no_t  port_no;
     mepa_macsec_init_t init_get;
 
+    if(!req->set) {
+        T_E("\nInvalid Argument");
+        cli_printf("\n Syntax : %s\n", "macsec disable <port_list> [bypass_none|bypass_enable]");
+        return;
+    }
     for(int iport = 0; iport < MAX_PORTS; iport++) {
         port_no = iport2uport(iport);
         if (req->port_list[port_no] == 0) {
@@ -267,7 +280,7 @@ static void cli_cmd_macsec_port_state(cli_req_t *req)
                    cli_enable_txt(status));
             continue;
         }
- 
+
         if((rc = mepa_macsec_is_capable(meba_macsec_instance->phy_devices[iport], iport, &macsec_capable)) != MEPA_RC_NOT_IMPLEMENTED) {
             capable = macsec_capable;
             if ((rc = mepa_macsec_init_get(meba_macsec_instance->phy_devices[iport], &init_get)) == MEPA_RC_OK) {
@@ -291,28 +304,94 @@ static void cli_cmd_secy_create(cli_req_t *req)
 {
     macsec_configuration *mreq = req->module_req;
     mepa_rc rc = MEPA_RC_ERROR;
+    int protect = 0, frame_val = 0, cipher_sel = 0, sectag_len = 0, es_bit = 0, scb_bit = 0;
 
     if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
         printf(" Dev is Not Created for the port : %d\n", req->port_no);
         return;
     }
+    mepa_macsec_secy_conf_t secy_conf;
 
+    cli_printf("\n SECTAG PARAMETERS CONFIGURATION ........................ \n");
+    cli_printf("\n\n Protect Frames [1 : true, 0 : false] : ");
+    scanf("%d", &protect);
+    if(protect == 0 || protect == 1) {
+        secy_conf.protect_frames = protect;
+    } else {
+        T_E("\n Invalid input Press 0 or 1\n");
+        return;
+    }
+    cli_printf("\n Select Frame Validation [0 : Disable, 1 : Strict , 2 : Check] : ");
+    scanf("%d", &frame_val);
+    switch(frame_val) {
+    case 0:
+        secy_conf.validate_frames = MEPA_MACSEC_VALIDATE_FRAMES_DISABLED;
+        break;
+    case 1:
+        secy_conf.validate_frames = MEPA_MACSEC_VALIDATE_FRAMES_STRICT;
+        break;
+    case 2:
+        secy_conf.validate_frames = MEPA_MACSEC_VALIDATE_FRAMES_CHECK;
+        break;
+    default:
+        T_E("\n Invalid Frame validation input\n");
+        return;
+    }
+    cli_printf("\n Select Cipher Suit [0 : GCM-AES-128,  1 : GCM-AES-256,  2 : GCM-AES-XPN-128,  3 : GCM-AES-XPN-256] : ");
+    scanf("%d", &cipher_sel);
+    switch(cipher_sel) {
+    case 0:
+        secy_conf.current_cipher_suite = MEPA_MACSEC_CIPHER_SUITE_GCM_AES_128;
+        break;
+    case 1:
+        secy_conf.current_cipher_suite = MEPA_MACSEC_CIPHER_SUITE_GCM_AES_256;
+        break;
+    case 2:
+        secy_conf.current_cipher_suite = MEPA_MACSEC_CIPHER_SUITE_GCM_AES_XPN_128;
+        break;
+    case 3:
+        secy_conf.current_cipher_suite = MEPA_MACSEC_CIPHER_SUITE_GCM_AES_XPN_256;
+        break;
+    default:
+        T_E("\n Invalid Cipher Suit Input \n");
+        return;
+    }
+    cli_printf("\n Sectag length [0 : 16-byte Sectag,  1 : 8-Byte Sectag] : ");
+    scanf("%d", &sectag_len);
+    if(sectag_len == 0 || sectag_len == 1) {
+        secy_conf.always_include_sci = !(sectag_len);
+    } else {
+        T_E("\n Invalid Sectag Length Input \n");
+        return;
+    }
+    cli_printf("\n End Station(ES) Bit in Sectag (0 or 1) : ");
+    scanf("%d", &es_bit);
+    if(es_bit == 0 || es_bit == 1) {
+        secy_conf.use_es = es_bit;
+    } else {
+        T_E("\n Invalid End Station Bit Input\n");
+        return;
+    }
+    cli_printf("\n Single Copy Broadcast (SCB) in Sectag (0 or 1) : ");
+    scanf("%d", &scb_bit);
+    if(scb_bit == 0 || scb_bit == 1) {
+       secy_conf.use_scb = scb_bit;
+    } else {
+        T_E("\n invalid SCB Input\n");
+	return;
+    }
+    cli_printf("\n");
+
+    
     mepa_macsec_port_t     macsec_port;
     macsec_port.port_no    = req->port_no;
     macsec_port.service_id = 0;
     macsec_port.port_id    = mreq->port_id;
 
-    mepa_macsec_secy_conf_t secy_conf;
-    secy_conf.validate_frames        = mreq->frame_validate;
     secy_conf.replay_protect         = FALSE;
     secy_conf.replay_window          = 0;
-    secy_conf.protect_frames         = mreq->protect_frames;
-    secy_conf.always_include_sci     = TRUE;     /* 16 Byte Sectag */
-    secy_conf.use_es                 = FALSE;    /* when the System Identifier bytes of the SCI match the MAC source address ES = 1 */
-    secy_conf.use_scb                = FALSE;
     secy_conf.confidentiality_offset = 0;
     memcpy(&secy_conf.mac_addr, &mreq->mac_addr, sizeof(mepa_mac_t));
-    secy_conf.current_cipher_suite   = mreq->cipher;
 
     if(mreq->secy_create) {
         if ((rc = mepa_macsec_secy_conf_add(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &secy_conf)) != MEPA_RC_OK) {
@@ -332,8 +411,6 @@ static void cli_cmd_secy_create(cli_req_t *req)
         }
     }
     cli_printf("\n ...... SecY %s on Port : %d with port_id : %d......\n", mreq->secy_create ? "Created" : "Updated", req->port_no, mreq->port_id);
-
-
     return;
 }
 
@@ -375,7 +452,12 @@ static void cli_cmd_match_conf(cli_req_t *req)
 {
     macsec_configuration *mreq = req->module_req;
     mepa_rc rc;
-
+    int match = 0;
+    if(!req->set) {
+        T_E("\n Invalid Syntax\n");
+        cli_printf("\n Syntax : pattern_conf <port_no> port-id <port_id> [egress|ingress] [cont_port|uncont_port|drop]\n");
+        return;
+    } 
     if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
         printf(" Dev is Not Created for the port : %d\n", req->port_no);
         return;
@@ -387,12 +469,60 @@ static void cli_cmd_match_conf(cli_req_t *req)
     macsec_port.port_id    = mreq->port_id;
 
     mepa_macsec_direction_t direction;
-
     /* Pattern Matching rule */
     mepa_macsec_match_pattern_t pattern_match;
     memset(&pattern_match, 0 , sizeof(mepa_macsec_match_pattern_t));
+
+    cli_printf("\n 0 = Disable Pattern Matching");
+    cli_printf("\n 1 = DMAC Pattern Matching");
+    cli_printf("\n 2 = Ethertype Patter Matching");
+    cli_printf("\n 3 = SMAC Pattern MAtching");
+    cli_printf("\n 4 = DMAC and Ethertype Match");
+    cli_printf("\n 5 = SMAC and Ethertype Match");
+    cli_printf("\n 6 = DMAC and SMAC Matching ");
+    cli_printf("\n 7 = DMAC, Ethertype and SMAC Matching");
+    cli_printf("\n 8 = Outer VLAN ID Match");
+    cli_printf("\n 9 = Inner VLAN ID Match");
+    cli_printf("\n\n Parameter that needs to be Matched : ");
+    scanf("%d", &match);
+    cli_printf("\n\n");
+    switch(match) {
+    case 0:
+        pattern_match.match = MEPA_MACSEC_MATCH_DISABLE;
+        break;
+    case 1:
+        pattern_match.match = MEPA_MACSEC_MATCH_DMAC;
+        break;
+    case 2:
+        pattern_match.match = MEPA_MACSEC_MATCH_ETYPE;
+        break;
+    case 3:
+        pattern_match.match = MEPA_MACSEC_MATCH_SMAC;
+        break;
+    case 4:
+        pattern_match.match = MEPA_MACSEC_MATCH_DMAC | MEPA_MACSEC_MATCH_ETYPE;
+        break;
+    case 5:
+        pattern_match.match = MEPA_MACSEC_MATCH_SMAC | MEPA_MACSEC_MATCH_ETYPE;
+        break;
+    case 6:
+        pattern_match.match = MEPA_MACSEC_MATCH_DMAC | MEPA_MACSEC_MATCH_SMAC;
+        break;
+    case 7:
+        pattern_match.match = MEPA_MACSEC_MATCH_DMAC | MEPA_MACSEC_MATCH_SMAC | MEPA_MACSEC_MATCH_ETYPE;
+        break;
+    case 8:
+        pattern_match.match = MEPA_MACSEC_MATCH_VLAN_ID | MEPA_MACSEC_MATCH_HAS_VLAN;
+        break;
+    case 9:
+        pattern_match.match = MEPA_MACSEC_MATCH_VLAN_ID_INNER | MEPA_MACSEC_MATCH_HAS_VLAN_INNER;
+        break;
+    default:
+        T_E("\n Invalid Pattern matching Parameter\n");
+        return;
+    }
+    cli_printf("\n Pattern Match value is : %d\n", pattern_match.match);
     pattern_match.priority            = MEPA_MACSEC_MATCH_PRIORITY_HIGH;
-    pattern_match.match               = mreq->pattern_match;
     pattern_match.is_control          = TRUE;
     pattern_match.etype               = pattern_values.pattern_ethtype;
     pattern_match.vid                 = pattern_values.vid;
@@ -413,7 +543,6 @@ static void cli_cmd_match_conf(cli_req_t *req)
     } else {
         direction = MEPA_MACSEC_DIRECTION_INGRESS;
     }
-
     if ((rc = mepa_macsec_pattern_set(meba_macsec_instance->phy_devices[req->port_no], macsec_port, direction, mreq->match_action, &pattern_match)) != MEPA_RC_OK) {
         T_E("\n Error in Configuring Pattern matching rule on port : %d \n", req->port_no);
         return;
@@ -487,8 +616,6 @@ static void cli_cmd_rx_sc_create(cli_req_t *req)
         T_E("\n Error in getting the SecY on port : %d \n", req->port_no);
         return;
     }
-    printf("\n MAC Address :  %2x-%2x-%2x-%2x-%2x-%2x \n", secy_conf_get.mac_addr.addr[0], secy_conf_get.mac_addr.addr[1],
-           secy_conf_get.mac_addr.addr[2], secy_conf_get.mac_addr.addr[3], secy_conf_get.mac_addr.addr[4],secy_conf_get.mac_addr.addr[5]);
 
     mepa_macsec_sci_t sci;
     memcpy(&sci.mac_addr, &secy_conf_get.mac_addr, sizeof(mepa_mac_t));
@@ -600,6 +727,12 @@ static void cli_cmd_tx_sa_create(cli_req_t *req)
     char filename[100];
     mepa_macsec_secy_conf_t secy_conf_get;
     mepa_macsec_ssci_t ssci;
+
+    if(!req->set) {
+        T_E("\n Invalid Syntax\n");
+        cli_printf(" Syntax : tx_sa_create <port_no> port-id <port_id> an <an_no> next-pn <pn> conf [true|false] \n");
+        return;
+    }
     if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
         printf(" Dev is Not Created for the port : %d\n", req->port_no);
         return;
@@ -645,7 +778,6 @@ static void cli_cmd_tx_sa_create(cli_req_t *req)
     memcpy(sak.buf, key, sizeof(key));
     memcpy(sak.h_buf, h_key, sizeof(h_key));
     memcpy(sak.salt.buf, salt, sizeof(salt));
-    sak.len = MAX_KEY_LEN;
     memcpy(ssci.buf, ssci_xpn, sizeof(ssci_xpn));
 
     /*Assigning Global Variables to Zero */
@@ -658,7 +790,13 @@ static void cli_cmd_tx_sa_create(cli_req_t *req)
         return;
     }
 
-    if(secy_conf_get.current_cipher_suite == MEPA_MACSEC_CIPHER_SUITE_GCM_AES_XPN_256) {
+    if(secy_conf_get.current_cipher_suite== MEPA_MACSEC_CIPHER_SUITE_GCM_AES_XPN_128 || secy_conf_get.current_cipher_suite== MEPA_MACSEC_CIPHER_SUITE_GCM_AES_128) {
+        sak.len = KEY_LEN_128_BIT;
+    } else {
+       sak.len = KEY_LEN_256_BIT;
+    }
+
+    if(secy_conf_get.current_cipher_suite== MEPA_MACSEC_CIPHER_SUITE_GCM_AES_XPN_256 ||secy_conf_get.current_cipher_suite== MEPA_MACSEC_CIPHER_SUITE_GCM_AES_XPN_128){
         next_pkt.xpn = mreq->next_pn;
         if((rc = mepa_macsec_tx_seca_set(meba_macsec_instance->phy_devices[req->port_no], macsec_port, mreq->an_no, next_pkt, mreq->conf, &sak, &ssci)) != MEPA_RC_OK)
         {
@@ -745,7 +883,6 @@ static void cli_cmd_rx_sa_create(cli_req_t *req)
     memcpy(sak.buf, key, sizeof(key));
     memcpy(sak.h_buf, h_key, sizeof(h_key));
     memcpy(sak.salt.buf, salt, sizeof(salt));
-    sak.len = MAX_KEY_LEN;
     memcpy(ssci.buf, ssci_xpn, sizeof(ssci_xpn));
 
     /*Assigning Global Variables to Zero */
@@ -754,7 +891,13 @@ static void cli_cmd_rx_sa_create(cli_req_t *req)
     memset(salt, 0, sizeof(salt));
     memset(ssci_xpn, 0, sizeof(ssci_xpn));
 
-    if(secy_conf_get.current_cipher_suite == MEPA_MACSEC_CIPHER_SUITE_GCM_AES_XPN_256) {
+    if(secy_conf_get.current_cipher_suite== MEPA_MACSEC_CIPHER_SUITE_GCM_AES_XPN_128 || secy_conf_get.current_cipher_suite== MEPA_MACSEC_CIPHER_SUITE_GCM_AES_128) {
+        sak.len = KEY_LEN_128_BIT;
+    } else {
+       sak.len = KEY_LEN_256_BIT;
+    }
+
+    if(secy_conf_get.current_cipher_suite == MEPA_MACSEC_CIPHER_SUITE_GCM_AES_XPN_256 ||secy_conf_get.current_cipher_suite== MEPA_MACSEC_CIPHER_SUITE_GCM_AES_XPN_128) {
         next_pkt.xpn = mreq->lowest_pn;
         if((rc = mepa_macsec_rx_seca_set(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &sci, mreq->an_no, next_pkt, &sak, &ssci)) != MEPA_RC_OK) {
             T_E("Error is creating Rx Secure asoosiation on port %d\n", req->port_no);
@@ -860,7 +1003,7 @@ static void cli_cmd_rx_sa_pn_update(cli_req_t *req)
     memcpy(&sci.mac_addr, &secy_conf_get.mac_addr, sizeof(mepa_mac_t));
     sci.port_id = mreq->rx_sc_id;
 
-    if(secy_conf_get.current_cipher_suite == MEPA_MACSEC_CIPHER_SUITE_GCM_AES_XPN_256) {
+    if(secy_conf_get.current_cipher_suite == MEPA_MACSEC_CIPHER_SUITE_GCM_AES_XPN_256 ||secy_conf_get.current_cipher_suite== MEPA_MACSEC_CIPHER_SUITE_GCM_AES_XPN_128){
         next_pkt.xpn = mreq->lowest_pn;
         if((rc = mepa_macsec_rx_seca_lowest_pn_update(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &sci, mreq->an_no, next_pkt)) != MEPA_RC_OK) {
             T_E("Error is Updating Next PN on port %d\n", req->port_no);
@@ -895,10 +1038,17 @@ static void cli_cmd_macsec_secy_statistics(cli_req_t *req)
 {
     mepa_rc rc;
     macsec_configuration *mreq = req->module_req;
+
+    if(!req->set) {
+        T_E("\n Invalid Syntax\n");
+        cli_printf("\n Syntax : statistics secy <port_no> port-id <port_id> [get|clear]\n");
+        return;
+    }
     if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
         printf(" Dev is Not Created for the port : %d\n", req->port_no);
         return;
     }
+
     mepa_macsec_port_t  macsec_port;
     macsec_port.port_no    = req->port_no;
     macsec_port.service_id = 0;
@@ -933,6 +1083,11 @@ static void cli_cmd_macsec_tx_sc_statistics(cli_req_t *req)
 {
     mepa_rc rc;
     macsec_configuration *mreq = req->module_req;
+    if(!req->set) {
+        T_E("\n Invalid Syntax\n");
+        cli_printf("\n Syntax : statistics tx_sc <port_no> port-id <port_id> [get|clear]\n");
+        return;
+    }
     if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
         printf(" Dev is Not Created for the port : %d\n", req->port_no);
         return;
@@ -966,6 +1121,11 @@ static void cli_cmd_macsec_tx_sa_statistics(cli_req_t *req)
 {
     mepa_rc rc;
     macsec_configuration *mreq = req->module_req;
+    if(!req->set) {
+        T_E("\n Invalid Syntax\n");
+        cli_printf("\n Syntax : statistics tx_sa <port_no> port-id <port_id> an <an_no> [get|clear]\n");
+        return;
+    }
     if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
         printf(" Dev is Not Created for the port : %d\n", req->port_no);
         return;
@@ -999,6 +1159,11 @@ static void cli_cmd_macsec_rx_sc_statistics(cli_req_t *req)
 {
     mepa_rc rc;
     macsec_configuration *mreq = req->module_req;
+    if(!req->set) {
+        T_E("\n Invalid Syntax\n");
+        cli_printf("\n Syntax : statistics rx_sc <port_no> port-id <port_id> sc-id <id> [get|clear]\n");
+        return;
+    }
     if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
         printf(" Dev is Not Created for the port : %d\n", req->port_no);
         return;
@@ -1046,6 +1211,11 @@ static void cli_cmd_macsec_rx_sa_statistics(cli_req_t *req)
 {
     mepa_rc rc;
     macsec_configuration *mreq = req->module_req;
+    if(!req->set) {
+        T_E("\n Invalid Syntax\n");
+        cli_printf("\n Syntax : statistics rx_sa <port_no> port-id <port_id> sc-id <id> an <an_no> [get|clear]\n");
+        return;
+    }
     if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
         printf(" Dev is Not Created for the port : %d\n", req->port_no);
         return;
@@ -1093,6 +1263,11 @@ static void cli_cmd_macsec_mac_statistics(cli_req_t *req)
 {
     mepa_rc rc;
     macsec_configuration *mreq = req->module_req;
+    if(!req->set) {
+        T_E("\n Invalid Syntax\n");
+        cli_printf("\n Syntax : statistics mac [hmac|lmac] <port_no> [get|clear]\n");
+        return;
+    }
     if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
         printf(" Dev is Not Created for the port : %d\n", req->port_no);
         return;
@@ -1157,6 +1332,11 @@ static void cli_cmd_macsec_vlan_bypass(cli_req_t *req)
 {
     mepa_rc rc;
     macsec_configuration *mreq = req->module_req;
+    if(!req->set) {
+        T_E("\n invalid Syntax\n");
+        cli_printf("Syntax : vlan_bypass <port_no> port-id <port_id> [zero|one|two|three|four]\n");
+        return;
+    }
     if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
         printf(" Dev is Not Created for the port : %d\n", req->port_no);
         return;
@@ -1210,7 +1390,11 @@ static void cli_cmd_macsec_frame_capt(cli_req_t *req)
 {
     mepa_rc rc;
     macsec_configuration *mreq = req->module_req;
-
+    if(!req->set) {
+        T_E("\n invalid Syntax\n");
+        cli_printf("Syntax : frame capture <port_list> [egress|ingress]\n");
+        return;
+    }
     mepa_port_no_t  port_no;
     for(int iport = 0; iport < MAX_PORTS; iport++) {
         port_no = iport2uport(iport);
@@ -1355,6 +1539,11 @@ static void cli_cmd_macsec_event_set(cli_req_t *req)
     mepa_rc rc;
     macsec_configuration *mreq = req->module_req;
     mepa_port_no_t  port_no;
+    if(!req->set) {
+        T_E("\n Invalid Syntax \n");
+        cli_printf(" Syntax : macsec event set <port_list> [rollover|seq_threshold] [evt_enable|evt_disable]\n");
+        return;
+    }
     for(int iport = 0; iport < MAX_PORTS; iport++) {
         port_no = iport2uport(iport);
         if (req->port_list[port_no] == 0) {
@@ -1527,16 +1716,22 @@ static void cli_cmd_macsec_conf_get(cli_req_t *req)
         cli_printf("%-25s : %s\n","confidentiality", conf ? "Enabled":"Disabled");
         cli_printf("%-25s : %s\n","Active", active ? "Yes" : "No");
         cli_printf("%-25s :", "Key");
-        for(int i = 0; i < 32; i++) {
-            cli_printf(" %d,", sak.buf[i]);
+        for(int i = 0; i < MAX_KEY_LEN; i++) {
+            cli_printf(" %d", sak.buf[i]);
+            if(i < MAX_KEY_LEN - 1)
+                cli_printf(",");
         }
         cli_printf("\n%-25s :", "Hash Key");
-        for(int i = 0; i < 16; i++) {
-            cli_printf(" %d,", sak.h_buf[i]);
+        for(int i = 0; i < MAX_HASK_KEY_LEN; i++) {
+            cli_printf(" %d", sak.h_buf[i]);
+            if(i < MAX_HASK_KEY_LEN - 1)
+                cli_printf(",");
         }
         cli_printf("\n%-25s :", "Salt");
-        for(int i = 0; i < 12; i++) {
-            cli_printf(" %d,", sak.salt.buf[i]);
+        for(int i = 0; i < MAX_SALT_KEY_LEN; i++) {
+            cli_printf(" %d", sak.salt.buf[i]);
+            if(i < MAX_SALT_KEY_LEN - 1)
+                cli_printf(",");
         }
         cli_printf("\n");
         break;
@@ -1592,19 +1787,114 @@ static void cli_cmd_macsec_conf_get(cli_req_t *req)
         cli_printf("%-25s :", "Key");
         for(int i = 0; i < MAX_KEY_LEN; i++) {
             cli_printf(" %d,", sak.buf[i]);
+            if(i < MAX_KEY_LEN - 1)
+                cli_printf(",");
         }
         cli_printf("\n%-25s :", "Hash Key");
         for(int i = 0; i < MAX_HASK_KEY_LEN; i++) {
             cli_printf(" %d,", sak.h_buf[i]);
+            if(i < MAX_HASK_KEY_LEN - 1)
+                cli_printf(",");
         }
         cli_printf("\n%-25s :", "Salt");
         for(int i = 0; i < MAX_SALT_KEY_LEN; i++) {
             cli_printf(" %d,", sak.salt.buf[i]);
+            if(i < MAX_SALT_KEY_LEN - 1)
+                cli_printf(",");
         }
         cli_printf("\n");
         break;
     default:
         break;
+    }
+    return;
+}
+
+static void cli_cmd_cltr_frame_set(cli_req_t *req)
+{
+    mepa_rc rc;
+    int match = 0;
+    macsec_configuration *mreq = req->module_req;
+    if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
+        printf(" Dev is Not Created for the port : %d\n", req->port_no);
+        return;
+    }
+    mepa_macsec_control_frame_match_conf_t conf;
+    cli_printf("\n");
+    cli_printf("\n 1 = DMAC Pattern Matching");
+    cli_printf("\n 2 = Ethertype Patter Matching");
+    cli_printf("\n 3 = DMAC and Ethertype Match");
+    cli_printf("\n\n Parameter that needs to be Matched : ");
+    scanf("%d", &match);
+    cli_printf("\n\n");
+    switch(match) {
+    case 1:
+        conf.match = MEPA_MACSEC_MATCH_DMAC;
+        break;
+    case 2:
+        conf.match = MEPA_MACSEC_MATCH_ETYPE;
+        break;
+    case 3:
+        conf.match = MEPA_MACSEC_MATCH_DMAC | MEPA_MACSEC_MATCH_ETYPE;
+        break;
+    default:
+        T_E("\n Invalid Match Input\n");
+        return;
+    }
+    memcpy(&conf.dmac, &mreq->pattern_dst_mac_addr, sizeof(mreq->pattern_dst_mac_addr));
+    conf.etype = mreq->pattern_ethtype;
+
+    if ((rc = mepa_macsec_control_frame_match_conf_set(meba_macsec_instance->phy_devices[req->port_no], req->port_no, &conf, NULL)) != MEPA_RC_OK) {
+        T_E("\n Error in Configuring Control Match Configuration on port : %d \n", req->port_no);
+        return;
+    }
+    cli_printf("\n ...... Control Frame Match Configured on port : %d  ......\n", req->port_no);
+    return;
+}
+
+static void cli_cmd_cltr_frame_get(cli_req_t *req)
+{
+    mepa_rc rc;
+    if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
+        printf(" Dev is Not Created for the port : %d\n", req->port_no);
+        return;
+    }
+    mepa_macsec_control_frame_match_conf_t conf;
+    cli_printf("\n\n Rules configured for 802.1X Control Traffic Bypass on Port %d", req->port_no);
+    cli_printf("\n==================================================================================================\n");
+    cli_printf("\n %-10s%-15s%-20s%s", "Rule id", "Ethertype", "DMAC Address", "Match");
+    cli_printf("\n---------------------------------------------------------------------------------\n");
+    for(uint32_t i = 0; i < VSC_PHY_MAX_CP_RULES; i++) {
+        if ((rc = mepa_macsec_control_frame_match_conf_get(meba_macsec_instance->phy_devices[req->port_no], req->port_no, &conf, i)) != MEPA_RC_OK) {
+            T_E("\n Error in Geting Control Match Configuration on port : %d \n", req->port_no);
+            return;
+        }
+        if(conf.match > 1) {
+            if(conf.match == MEPA_MACSEC_MATCH_DMAC) {
+                cli_printf("   %s\n", "DMAC");
+            } else if(conf.match == MEPA_MACSEC_MATCH_ETYPE) {
+                cli_printf("   %s\n", "Ethtype");
+            } else if(conf.match == (MEPA_MACSEC_MATCH_ETYPE | MEPA_MACSEC_MATCH_DMAC)) {
+                cli_printf("   %s\n", "DMAC and Ethtype");
+            }
+         }
+    }
+    return;
+}
+
+static void cli_cmd_cltr_frame_del(cli_req_t *req)
+{
+    mepa_rc rc;
+    macsec_configuration *mreq = req->module_req;
+    if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
+        printf(" Dev is Not Created for the port : %d\n", req->port_no);
+        return;
+    }
+    for(int i = 0; i < mreq->value_cnt; i++) {
+        if ((rc = mepa_macsec_control_frame_match_conf_del(meba_macsec_instance->phy_devices[req->port_no], req->port_no, mreq->value_list[i])) != MEPA_RC_OK) {
+            T_E("\n Error in Geting Control Match Configuration on port : %d \n", req->port_no);
+            return;
+        }
     }
     return;
 }
@@ -1618,7 +1908,11 @@ static void cli_cmd_macsec_cmds()
     cli_printf("\n %-20s| %-80s| %s", "macsec port_state", "", "Provides MACsec Capability and MACsec State of all Ports");
     cli_printf("\n %-20s| %-80s| %s", "macsec enable", " <port_list> [bypass_none|bypass_disable]", "Enables MACsec Block");
     cli_printf("\n %-20s| %-80s| %s", "macsec disable", "<port_list> [bypass_none|bypass_enable]", "Disables MACsec Block");
+    cli_printf("\n %-20s| %-80s| %s", "secy_create_upd", "[create|update] <port_no> port-id <port_id> mac-addr <mac_address>", "Create/Update Secure Entity");
     cli_printf("\n %-20s| %-80s| %s", "secy_del", "<port_no> port-id <port_id>", "Deletes available Secure Entity");
+    cli_printf("\n %-20s| %-80s| %s", "match_conf", "<port_no> ethtype <ether_type> src_mac <mac_address> dst_mac <mac_address>", "Pattern Matching Params");
+    cli_printf("\n %-20s| %-80s| %s", " ", "vlanid <vlan> vid-inner <vlan>", " ");
+    cli_printf("\n %-20s| %-80s| %s", "pattern_conf", "<port_no> port-id <port_id> [egress|ingress] [cont_port|uncont_port|drop]", " ");
     cli_printf("\n %-20s| %-80s| %s", "tx_sc_create", "<port_no> port-id <port_id>", "Transmit Secure Channel Create");
     cli_printf("\n %-20s| %-80s| %s", "rx_sc_create", "<port_no> port-id <port_id> sc-id <id>", "Receive Secure Channel Create");
     cli_printf("\n %-20s| %-80s| %s", "tx_sc_del", "<port_no> port-id <port_id>", "transmit Secure Channel Delete");
@@ -1640,6 +1934,10 @@ static void cli_cmd_macsec_cmds()
     cli_printf("\n %-20s| %-80s| %s", "macsec event set", "<port_list> [rollover|seq_threshold] [evt_enable|evt_disable]", "MACsec Event Enable or Disable");
     cli_printf("\n %-20s| %-80s| %s", "macsec event get", "", "MACsec Event Status of all Ports");
     cli_printf("\n %-20s| %-80s| %s", "macsec seq_threshold", "[get|set] <port_list> [<threshold_val>]", "MACsec Sequence Thresold Val Set or Get");
+    cli_printf("\n %-20s| %-80s| %s", "ctrl_frame set", "<port_no> ethtype <ether_type> dst_mac <mac_address>", "802.1X Control Traffic Bypass Confg Set");
+    cli_printf("\n %-20s| %-80s| %s", "ctrl_frame get", "<port_no>", "802.1X Control Traffic Bypass Confg Get");
+    cli_printf("\n %-20s| %-80s| %s", "ctrl_frame del", "<port_no> <rule_list>", "802.1X Control Traffic Bypass Confg Del");
+    cli_printf("\n\n");
     return;
 }
 
@@ -1674,42 +1972,6 @@ static int cli_param_parse_bypass_config(cli_req_t *req)
     return 0;
 }
 
-static int cli_cmd_parse_cipher_suit(cli_req_t *req)
-{
-    const char     *found;
-    macsec_configuration *mreq = req->module_req;
-    int len = 0;
-    if ((found = cli_parse_find(req->cmd, req->stx)) == NULL)
-        return 1;
-    len = strlen(found);
-    if (!strncasecmp(found, KEYWORD_XPN, len)) {
-        mreq->cipher = MEPA_MACSEC_CIPHER_SUITE_GCM_AES_XPN_256;
-    }
-    else if (!strncasecmp(found, KEYWORD_NON_XPN, len)) {
-        mreq->cipher = MEPA_MACSEC_CIPHER_SUITE_GCM_AES_256;
-    }
-    return 0;
-}
-
-static int cli_cmd_parse_frame_validate(cli_req_t *req)
-{
-    const char     *found;
-    macsec_configuration *mreq = req->module_req;
-    int len = 0;
-    if ((found = cli_parse_find(req->cmd, req->stx)) == NULL)
-        return 1;
-    len = strlen(found);
-    if (!strncasecmp(found, KEYWORD_STRICT, len)) {
-        mreq->frame_validate = MEPA_MACSEC_VALIDATE_FRAMES_STRICT;
-    }
-    else if (!strncasecmp(found, KEYWORD_CHECK, len)) {
-        mreq->frame_validate = MEPA_MACSEC_VALIDATE_FRAMES_CHECK;
-    }
-    else if (!strncasecmp(found, KEYWORD_DISABLE, len)) {
-        mreq->frame_validate = MEPA_MACSEC_VALIDATE_FRAMES_DISABLED;
-    }
-    return 0;
-}
 
 static int cli_cmd_parse_u16_param(cli_req_t *req)
 {
@@ -1720,11 +1982,6 @@ static int cli_cmd_parse_u16_param(cli_req_t *req)
         cli_parm_u16(req, &value, 0, MASK_16BIT);
         mreq->pattern_ethtype = value;
         keyword.etype_parsed = 0;
-    }
-    else if(keyword.match_parsed == 1) {
-        cli_parm_u16(req, &value, 0, MASK_16BIT);
-        mreq->pattern_match = value;
-        keyword.match_parsed = 0;
     }
     else if(keyword.vlan_id_parsed == 1) {
         cli_parm_u16(req, &value, 0, MASK_16BIT);
@@ -1794,6 +2051,7 @@ static int cli_cmd_parse_mac_addr(cli_req_t *req)
     len = strlen(req->cmd);
     if(len > MAC_ADDRESS_LEN) {
         cli_printf("\n Invalid MAC Address argument\n");
+	return 1;
     }
     if (sscanf(req->cmd, "%2x-%2x-%2x-%2x-%2x-%2x", &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]) == 6) {
         if (keyword.dst_mac_parsed == 1) {
@@ -1823,19 +2081,14 @@ static int cli_cmd_parse_mac_addr(cli_req_t *req)
 
 static int cli_cmd_parse_match_action(cli_req_t *req)
 {
-    const char     *found;
     macsec_configuration *mreq = req->module_req;
-    int len = 0;
-    if ((found = cli_parse_find(req->cmd, req->stx)) == NULL)
-        return 1;
-    len = strlen(found);
-    if (!strncasecmp(found, KEYWORD_CONT_PORT, len)) {
+    if (!strncasecmp(req->cmd, KEYWORD_CONT_PORT, strlen(req->cmd))) {
         mreq->match_action = MEPA_MACSEC_MATCH_ACTION_CONTROLLED_PORT;
     }
-    else if (!strncasecmp(found, KEYWORD_UNCONT_PORT, len)) {
+    else if (!strncasecmp(req->cmd, KEYWORD_UNCONT_PORT, strlen(req->cmd))) {
         mreq->match_action = MEPA_MACSEC_MATCH_ACTION_UNCONTROLLED_PORT;
     }
-    else if (!strncasecmp(found, KEYWORD_DROP, len)) {
+    else if (!strncasecmp(req->cmd, KEYWORD_DROP, strlen(req->cmd))) {
         mreq->match_action = MEPA_MACSEC_MATCH_ACTION_DROP;
     }
     return 0;
@@ -1851,9 +2104,6 @@ static int cli_cmd_parse_keyword(cli_req_t *req)
     }
     else if (!strncasecmp(req->cmd, KEYWORD_DST_MAC, strlen(req->cmd))) {
         keyword.dst_mac_parsed = 1;
-    }
-    else if (!strncasecmp(req->cmd, KEYWORD_MATCH, strlen(req->cmd))) {
-        keyword.match_parsed = 1;
     }
     else if (!strncasecmp(req->cmd, KEYWORD_VLANID, strlen(req->cmd))) {
         keyword.vlan_id_parsed = 1;
@@ -1990,7 +2240,11 @@ static int cli_cmd_macsec_param_conf_get(cli_req_t *req)
     }
     return 0;
 }
-
+static int cli_parm_value_rules(cli_req_t *req)
+{
+    macsec_configuration *mreq = req->module_req;
+    return cli_parse_values(req->cmd, mreq->value_list ,&mreq->value_cnt, 0, 26, 30);
+}
 
 static cli_cmd_t cli_cmd_macsec_table[] = {
     {
@@ -2024,7 +2278,7 @@ static cli_cmd_t cli_cmd_macsec_table[] = {
     },
 
     {
-        "secy_create_upd [create|update] <port_no> port-id <port_id> mac-addr <mac_address> protect [true|false] validate [strict|check|disable] cipher [xpn|n-xpn]",
+        "secy_create_upd [create|update] <port_no> port-id <port_id> mac-addr <mac_address>",
         "Create or Update the MACsec Secure Entity",
         cli_cmd_secy_create,
     },
@@ -2042,7 +2296,7 @@ static cli_cmd_t cli_cmd_macsec_table[] = {
     },
 
     {
-        "pattern_conf <port_no> port-id <port_id> [egress|ingress] [cont_port|uncont_port|drop] match <match_value>",
+        "pattern_conf <port_no> port-id <port_id> [egress|ingress] [cont_port|uncont_port|drop]",
         "Pattern Match Configuration",
         cli_cmd_match_conf,
     },
@@ -2177,6 +2431,24 @@ static cli_cmd_t cli_cmd_macsec_table[] = {
         "conf_get [secy|tx_sc|tx_sa|rx_sc|rx_sa] <port_no> port-id <port_id> sc-id <id> an <an_no>",
         "Get the Conf of SecY/SC/SA",
          cli_cmd_macsec_conf_get,
+    },
+
+    {
+        "ctrl_frame set <port_no> ethtype <ether_type> dst_mac <mac_address>",
+        "802.1X Control Traffic Bypass Configuration",
+         cli_cmd_cltr_frame_set,
+    },
+
+    {
+        "ctrl_frame get <port_no>",
+        "Configurations for 802.1X Control Traffic Bypass",
+         cli_cmd_cltr_frame_get,
+    },
+
+    {
+        "ctrl_frame del <port_no> <rule_list>",
+        "Delete the Configured rule for 802.1X Control Traffic bypass",
+        cli_cmd_cltr_frame_del,
     }
 };
 
@@ -2207,22 +2479,6 @@ static cli_parm_t cli_parm_table[] = {
         cli_param_parse_bypass_config,
     },
 
-    {
-        "xpn|n-xpn",
-        "\n\t xpn      : Extented Packet Number Cipher suit - 256 bit Key \n"
-        "\t non-xpn  : Non Extented Packet Number Cipher suit - 256 bit Key \n",
-        CLI_PARM_FLAG_SET,
-        cli_cmd_parse_cipher_suit,
-    },
-
-    {
-        "strict|check|disable",
-        "\n\t strict   : Perform integrity check and drop failed frames \n"
-        "\t check    : Perform integrity check do not drop failed frames \n"
-        "\t disable  : Do not perform integrity check \n",
-        CLI_PARM_FLAG_NONE,
-        cli_cmd_parse_frame_validate,
-    },
 
     {
         "<port_id>",
@@ -2234,7 +2490,7 @@ static cli_parm_t cli_parm_table[] = {
     {
         "<id>",
         "Receive Secure Channel Identifier",
-        CLI_PARM_FLAG_SET,
+        CLI_PARM_FLAG_NONE,
         cli_cmd_parse_u16_param,
     },
 
@@ -2263,14 +2519,14 @@ static cli_parm_t cli_parm_table[] = {
     {
         "egress|ingress",
         "Traffic Direction Egress or Ingress",
-         CLI_PARM_FLAG_NONE,
+         CLI_PARM_FLAG_SET,
          cli_cmd_parse_boolean,
     },
 
     {
         "cont_port|uncont_port|drop",
         "Forward Traffic to Controlled/Uncrontrolled Port or Drop Packet",
-         CLI_PARM_FLAG_NONE,
+         CLI_PARM_FLAG_SET,
          cli_cmd_parse_match_action,
     },
 
@@ -2302,16 +2558,9 @@ static cli_parm_t cli_parm_table[] = {
     },
 
     {
-        "<match_value>",
-        "Parameter Needs to be Matched",
-        CLI_PARM_FLAG_SET,
-        cli_cmd_parse_u16_param,
-    },
-
-    {
         "true|false",
         "Enable or Disable",
-         CLI_PARM_FLAG_NO_TXT,
+         CLI_PARM_FLAG_SET,
          cli_cmd_parse_boolean,
     },
 
@@ -2336,7 +2585,7 @@ static cli_parm_t cli_parm_table[] = {
     {
         "<an_no>",
         "Association Number",
-        CLI_PARM_FLAG_SET,
+        CLI_PARM_FLAG_NONE,
         cli_cmd_parse_u16_param,
     },
 
@@ -2358,7 +2607,7 @@ static cli_parm_t cli_parm_table[] = {
         "rollover|seq_threshold",
         "\n\t rollover : PN Rollover Event\n"
         "\t seq_threshold : PN Threshold event\n",
-        CLI_PARM_FLAG_SET,
+        CLI_PARM_FLAG_NONE,
         cli_cmd_event_parse,
     },
 
@@ -2374,7 +2623,7 @@ static cli_parm_t cli_parm_table[] = {
         "get|set",
         "\n\t get : Get the Value\n"
         "\t set : Set the Value\n",
-        CLI_PARM_FLAG_SET,
+        CLI_PARM_FLAG_NONE,
         cli_cmd_stats_get_clear,
     },
 
@@ -2383,6 +2632,13 @@ static cli_parm_t cli_parm_table[] = {
         "Packet Number",
         CLI_PARM_FLAG_SET,
         cli_cmd_parse_u64_param,
+    },
+
+    {
+        "<rule_list>",
+        "Control Traffic Rules",
+        CLI_PARM_FLAG_SET,
+        cli_parm_value_rules,
     },
 	
     {
@@ -2394,27 +2650,6 @@ static cli_parm_t cli_parm_table[] = {
 
     {
         "mac-addr",
-         "",
-         CLI_PARM_FLAG_NO_TXT,
-         cli_cmd_parse_keyword,
-    },
-
-    {
-        "protect",
-         "",
-         CLI_PARM_FLAG_NO_TXT,
-         cli_cmd_parse_keyword,
-    },
-
-    {
-        "validate",
-         "",
-         CLI_PARM_FLAG_NO_TXT,
-         cli_cmd_parse_keyword,
-    },
-
-    {
-        "cipher",
          "",
          CLI_PARM_FLAG_NO_TXT,
          cli_cmd_parse_keyword,
@@ -2439,13 +2674,6 @@ static cli_parm_t cli_parm_table[] = {
          "",
          CLI_PARM_FLAG_NO_TXT,
          cli_cmd_parse_keyword,
-    },
-
-    {
-        "match",
-        "",
-        CLI_PARM_FLAG_NO_TXT,
-        cli_cmd_parse_keyword,
     },
 
     {

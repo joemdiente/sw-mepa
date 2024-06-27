@@ -12,14 +12,6 @@
 #define KEYWORD_BYPASS_DISABLE  "bypass_disable"
 #define KEYWORD_BYPASS_ENABLE   "bypass_enable"
 
-/* MACsec Cipher Suit keywords */
-#define KEYWORD_XPN             "xpn"
-#define KEYWORD_NON_XPN         "non-xpn"
-
-/* MACsec Frame Validation */
-#define KEYWORD_STRICT          "strict"
-#define KEYWORD_CHECK           "check"
-#define KEYWORD_DISABLE         "disable"
 
 /* MACsec SecY Configuration keywords */
 #define KEYWORD_CREATE          "create"
@@ -36,7 +28,6 @@
 #define KEYWORD_ETHTYPE         "ethtype"
 #define KEYWORD_SRC_MAC         "src_mac"
 #define KEYWORD_DST_MAC         "dst_mac"
-#define KEYWORD_MATCH           "match"
 #define KEYWORD_VLANID          "vlanid"
 #define KEYWORD_VIDINNER        "vid-inner"
 
@@ -74,12 +65,12 @@
 #define KEYWORD_SEQ_THRE_EVT    "seq_threshold"
 
 #define MAC_ADDRESS_LEN    17 /* Length of MAC address string in formate "XX-XX-XX-XX-XX-XX" */
+#define MAX_VALUE_LIST     10
 
 typedef struct {
     mepa_bool_t     etype_parsed;         /* Ethertype Keyword Parsed */
     mepa_bool_t     src_mac_parsed;       /* Source MAC Address keyword Parsed */
     mepa_bool_t     dst_mac_parsed;       /* Destination MAC Address keyword Parsed */
-    mepa_bool_t     match_parsed;         /* Match Keyword Parsed */
     mepa_bool_t     vlan_id_parsed;       /* Vlan id Keyword Parsed */
     mepa_bool_t     vlan_inner_id_parsed; /* Inner Vlan id keyword Parsed */
     mepa_bool_t     rx_sc_id_parsed;      /* Receive Secure Channel identifier Parsed */
@@ -130,7 +121,6 @@ typedef struct {
     macsec_conf_get             conf_get;             /* Configuration Get */
     uint16_t                    vid;                  /* Pattern Match VLAN ID */
     uint16_t                    vid_inner;            /* Pattern Match Inner VLAN ID */
-    uint16_t                    pattern_match;        /* Parameter to be matched */
     uint16_t                    an_no;                /* Association Number for SA */
     uint16_t                    rx_sc_id;             /* Receive Secure Channel identifier */
     uint64_t                    next_pn;              /* Next Packet number */
@@ -143,5 +133,7 @@ typedef struct {
     mepa_bool_t                 rollover_event;       /* MACsec Rollover Event */ 
     mepa_bool_t                 sequence_threshold_event; /* MACsec Sequence threshold Event */
     mepa_bool_t                 enable;               /* Event Enable or Disable */
+    uint32_t                    value_list[MAX_VALUE_LIST];
+    uint32_t                    value_cnt;
 } macsec_configuration;
 
