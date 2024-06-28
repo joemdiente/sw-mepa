@@ -27,6 +27,7 @@
 #define PHY10G_PTP_ENCY_NXPN_EXPECT 168  /* Expected non-xpn encrypted data for sequence id field */
 #define PHY10G_PTP_ENCY_XPN_EXPECT 88    /* Expected xpn encrypted data for sequence id field */
 #define PTP_PKT_SEQ_ID_POSITION 45       /* Sequence id byte position in PTP raw packet */
+#define EDSX_NPI_PORT_NO        20       /* NPI Port Number in EDSx Board */
 
 uint8_t macsec_ports[MAX_PORTS] = {0};   /* MACsec Capable ports connected to EDSx */
 uint8_t phy_connected[MAX_PORTS] = {0};  /* Type of PHY Connected to port */
@@ -209,7 +210,8 @@ static int port_macsec_encryption_test(cli_req_t *req) {
     uint32_t buf_length = MEPA_MACSEC_FRAME_CAPTURE_SIZE_MAX;
     BOOL egr_fail = FALSE;
     BOOL skip_seq_id = FALSE;
-
+    uint8_t               frame_send[1600];
+    mesa_packet_tx_info_t tx_info;
     mepa_macsec_port_t  macsec_port;
     macsec_port.port_id = 1;
     macsec_port.service_id = 0;
@@ -397,6 +399,18 @@ static int port_macsec_encryption_test(cli_req_t *req) {
             egr_fail = TRUE;
             T_E("\nNo Frame is captured in MACsec FIFO on port : %d\n", macsec_ports[i]);
         }
+        /* Capturing the Encrypted Frame Captured in the MACsec FIFO and constructing this Packet in EDSX Switch
+         * Sending this frame to NPI Port of EDSx HOST, this is for Debugging Purpose 
+         */
+        memset(&frame_send, 0, sizeof(frame_send));
+        memcpy(&frame_send, &frame, sizeof(frame));
+        mesa_packet_tx_info_init(NULL, &tx_info);
+        tx_info.dst_port_mask = 1;
+        tx_info.dst_port_mask <<= EDSX_NPI_PORT_NO;
+        tx_info.dst_port = EDSX_NPI_PORT_NO;
+        if (mesa_packet_tx_frame(NULL, &tx_info, frame_send, frame_length) != MESA_RC_OK) {
+            cli_printf("\n Error in Sending frame port %d.................... \n", EDSX_NPI_PORT_NO);
+        }
         T_I("Captured encrypted frame length on port %d is:%d\n", macsec_ports[i],frame_length);
 
         /* Workarround for Malibu10G due to hardware limitations
@@ -451,7 +465,8 @@ static int port_macsec_decryption_test(cli_req_t *req) {
     uint8_t  frame[MEPA_MACSEC_FRAME_CAPTURE_SIZE_MAX];
     uint32_t buf_length = MEPA_MACSEC_FRAME_CAPTURE_SIZE_MAX;
     BOOL skip_seq_id = FALSE;
-
+    uint8_t        frame_send[1600];
+    mesa_packet_tx_info_t tx_info;
     macsec_kat *mreq = req->module_req;
     mepa_macsec_port_t  macsec_port;
     macsec_port.port_id = 1;
@@ -579,6 +594,19 @@ static int port_macsec_decryption_test(cli_req_t *req) {
             ingr_fail = TRUE;
             T_E("\n No Frame is captured in MACsec FIFO on port : %d\n", macsec_ports[i]);
         }
+        /* Capturing the Decrypted Frame Captured in the MACsec FIFO and constructing this Packet in EDSX Switch
+         * Sending this frame to NPI Port of EDSx HOST, this is for Debugging Purpose
+         */
+        memset(&frame_send, 0, sizeof(frame_send));
+        memcpy(&frame_send, &frame, sizeof(frame));
+        mesa_packet_tx_info_init(NULL, &tx_info);
+        tx_info.dst_port_mask = 1;
+        tx_info.dst_port_mask <<= EDSX_NPI_PORT_NO;
+        tx_info.dst_port = EDSX_NPI_PORT_NO;
+        if (mesa_packet_tx_frame(NULL, &tx_info, frame_send, frame_length) != MESA_RC_OK) {
+            cli_printf("\n error in Sending frame port %d .................... \n", EDSX_NPI_PORT_NO);
+        }
+
         T_I("Captured decrypted frame length on port %d is:%d\n", macsec_ports[i],frame_length);
 
         /* Workarround to skip the Sequence id comparision in Decrypted PTP packet */
