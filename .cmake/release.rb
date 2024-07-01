@@ -374,6 +374,13 @@ step $res, "API Doc" do
     run "cd release_ws/mepa/docs/scripts; #{$rvm_ruby} ./dg.rb -r #{rev} -s #{git_sha}", "doc"
     run "cp #{$ws}/mepa/mepa-doc.html images/.", "doc"
     run "cp #{$ws}/mepa/mepa-doc.html #{$ws}/.", "doc"
+    
+    run "ls", "doc"
+
+    #MEPA-APP-Doc
+    run "cd release_ws/mepa_demo/docs/scripts; #{$rvm_ruby} ./dg.rb -r #{rev} -s #{git_sha}", "doc"
+    run "cp #{$ws}/mepa_demo/mepa-app-doc.html images/.", "doc"
+    run "cp #{$ws}/mepa_demo/mepa-app-doc.html #{$ws}/.", "doc"
 
     run "ls", "doc"
 end

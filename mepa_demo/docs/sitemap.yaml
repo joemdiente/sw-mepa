@@ -1,0 +1,23 @@
+# Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+# SPDX-License-Identifier: MIT
+
+---
+conf:
+    rel_name: "MEPA-2024.09"
+
+pages:
+    - name: "Introduction"
+      src:  "mepa_demo/docs/introduction.adoc"
+
+    - name: "Getting started"
+      src:  "mepa_demo/docs/getting-started.adoc"
+
+    - name: "HW Supported"
+      src:  "mepa_demo/docs/supported_hw.adoc"
+
+    - name: "MEPA Sample Applications"
+      pages:
+        - src: "mepa_demo/docs/port-config.adoc"
+        - src: "mepa_demo/docs/kat-demo.adoc"
+        - src: "mepa_demo/docs/macsec-demo.adoc"
+---

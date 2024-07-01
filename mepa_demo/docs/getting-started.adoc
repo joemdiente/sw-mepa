@@ -1,0 +1,952 @@
+// Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+// SPDX-License-Identifier: MIT
+
+= Getting started for EDSx Board
+
+== Getting started for EDSx Board
+
+MESA as such is a C library, but the MESA packet includes a mepa-demo application,
+and scripts to build a complete bootable firmware image including a
+Linux root file system, mepa-demo application ,MESA library and MEPA library.
+
+The MESA packet includes both sources and binaries. Binaries make it easy to
+load the pre-build code on a reference system and explore the mepa-demo application.
+But most users of the MESA library will eventually need to build their own
+application, or integrate MESA into an existing application. Doing this requires
+compiling the sources.
+
+This document will cover how to prepare a development system, build the sources,
+load the binaries, and start the MEPA demo application.
+
+Users that are in a hurry, and already has a reference system can skip the steps
+to compile the sources, and instead using one of the binary images.
+
+== Pre-requests and preparations
+
+In order to follow this getting started guide, a version of the MESA packet and a
+reference board is needed.
+
+Further more, to build and load the MESA library and mepa-demo application a Linux
+development machine with root access is needed. This guide is using a Ubuntu
+Server version 18.04 with 8G of memory. Other distributions does also work, but
+they are expected to need other dependencies not documented here.
+
+When loading the firmware, this guide assumes that the Linux development machine
+is located at the same network as the reference board.
+
+=== Installing basic SW dependencies
+
+The first step is to install a couple of host tools needed by MESA. The packet
+manager and the name of the specific packets differs from distributions to
+distribution. Here are the instructions on how to do this on Ubuntu 18:
+
+----
+sudo apt-get install cmake cmake-curses-gui build-essential ruby ruby-parslet libjson-c-dev
+----
+
+Next we need a folder called `mscc` in `/opt` where the toolchains
+and BSP will be installed as explained later in the guide.
+
+----
+sudo mkdir -p /opt/mscc
+----
+
+==== Install and setup tftp server
+
+In order to load the SW to the reference board, we need a tftp server. If a tftp
+server is already available on your network, then you may skip this step. If
+not, then it can be installed using the instructions below:
+
+----
+sudo apt-get install tftpd-hpa
+sudo chmod 777 /var/lib/tftpboot/
+----
+
+== Extracting the sources
+
+The first step is to extract the MESA packet:
+
+----
+$ tar xf mesa-<version>.tar.gz
+$ cd mesa-<version>
+----
+
+== Copy a binary image to the tftp folder
+
+To confirm that the boards are working and compatible with a given firmware
+image, it is a good idea to start loading one of the binary images as a first
+step.
+
+To do this copy one of the image files from `./bin/<arch>/mepa_demo/` to the
+tftp server. Example:
+
+----
+$ cp bin/build-arm64/mepa_demo/arm64_vsc7558TSN.itb /var/lib/tftpboot/
+----
+
+To try out the binary image, skip the instructions to build, and go directly to
+the section on firmware loading.
+
+== Create a CMake project (and download BSP and toolchain)
+
+To build the sources a CMake project is needed. The easiest way to create a
+CMake project is to use the `./.cmake/create_cmake_project.rb` script:
+
+----
+$ ./.cmake/create_cmake_project.rb
+Usage: create_cmake_project <preset name> [output-folder]
+
+Valid presets:
+    mipsel
+    mipsel-debug
+    arm64
+    arm64-debug
+    arm64-asan
+    arm
+    arm-debug
+    x86
+----
+
+Lets prepare a project for arm64 based targets:
+
+----
+$ ./.cmake/create_cmake_project.rb arm64
+----
+
+Once the script is run the appropriate released package will be extracted in /opt/mscc/ folder.
+The BSP source package will be also be installed automatically if not availbale in /opt/mscc/.
+Following is the expected result to be displayed while creating CMake Project.
+----
+$ ./.cmake/create_cmake_project.rb arm64
+Removing old code base...
+sh -c "rm -r sw-mesa"
+Fetching latest copy...
+sudo /usr/local/bin/mscc-install-pkg -t mesa/v2024.03-SOAK-8-g314df891d@2024.03-soak mesa-v2024.03-SOAK-8-g314df891d@2024.03-soak
+mesa-v2024.03-SOAK-8-g314df891d@2024.03-soak seems to be installed already.
+mkdir -p sw-mesa && cp -r /opt/mscc/mesa-v2024.03-SOAK-8-g314df891d@2024.03-soak/* sw-mesa
+sudo /usr/local/bin/mscc-install-pkg -t brsdk/2023.02.8-1052-brsdk mscc-brsdk-arm64-2023.02.8-1052;
+/opt/mscc/.mscc-install-pkg-tmp
+wget -q -O - http://herent-sw-pkg.microsemi.net/jenkins/brsdk/2023.02.8-1052-brsdk/mscc-brsdk-arm64-2023.02.8-1052.tar.gz | tar -C /opt/mscc/.mscc-install-pkg-tmp -xzf -
+Package mscc-brsdk-arm64-2023.02.8-1052 installed
+mkdir -p build-arm64
+ln -s /opt/mscc/mscc-brsdk-arm64-2023.02.8-1052/arm64-armv8_a-linux-gnu/xstax/release/x86_64-linux/bin/cmake cmake
+./cmake -DCMAKE_TOOLCHAIN_FILE=/opt/mscc/mscc-brsdk-arm64-2023.02.8-1052/arm64-armv8_a-linux-gnu/xstax/release/x86_64-linux/share/buildroot/toolchainfile.cmake -DCMAKE_BUILD_TYPE=Release ..
+-- The C compiler identification is GNU 10.4.0
+-- The CXX compiler identification is GNU 10.4.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /opt/mscc/mscc-brsdk-arm64-2023.02.8-1052/arm64-armv8_a-linux-gnu/xstax/release/x86_64-linux/bin/aarch64-linux-gcc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /opt/mscc/mscc-brsdk-arm64-2023.02.8-1052/arm64-armv8_a-linux-gnu/xstax/release/x86_64-linux/bin/aarch64-linux-g++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Project name          = vtss_api
+--   Type                = Release
+--   c_flags             = -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -g0 -Wall -Wno-array-bounds -Wno-stringop-overflow -fasynchronous-unwind-tables -std=c99 -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -D_DEFAULT_SOURCE -ldl -O3 -DNDEBUG
+--   EXE_LINKER_FLAGS    =
+--   shared_linker_flags =
+-- Build mepa including
+-- Looking for include file endian.h
+-- Looking for include file endian.h - found
+-- Looking for include file asm/byteorder.h
+-- Looking for include file asm/byteorder.h - found
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/administrator/sw-mepa/build-arm64
+----
+
+== Selecting the Target and Building the SW
+
+The CMake project allows you to select what targets to build. By default, BUILD_mepa
+(mepa common) is selected. Other targets should be selected as per requirement.
+The steps to build the MEPA Static Libraries is available in 
+link:mepa-doc.html#mepa/docs/getting-started[Getting Started] section.
+
+=== Select the image(s) to build
+
+We now have CMake project configured to use the BSP and cross-tool chain to
+build binaries for the ARM target, but no targets has been enabled.
+
+Make sure to `cd` to the newly created build folder.
+
+The CMake will allow you to select what targets to build and image targets.
+By default nothing is selected. The various projects includes many targets, and 
+some naming conventions are used to make it easier to navigate.
+
+Generally the `vscXXXX` number is included in all targets to indicate what
+device a given target supports.
+
+In the various CMake projects, the following categories of targets can be
+found:
+
+. Library targets. These are not bootable, it is just libraries supporting a
+  given chip, and must be combined with an actual application, root file system
+  and kernel to provide a functional system.
+.. `vscXXXX` These are shared libraries for a given `vsc` chip ID.
+.. `vscXXXX_static` These are static libraries for a given `vsc` chip ID.
+
+. Bootable demo images. These targets will generate a complete firmware image
+  including kernel, root file system, and the MEPA Demo application. These are
+  the images used in this getting started article.
+.. `IMG_arm64_vscXXXX` This is the image which is used on the ARM64 based targets.
+
+
+As we are interested in a bootable firmware we need either a `fit`/`itb` or `ext4`
+image. In this case we want the `IMG_arm64_vsc7558TSN` target. To enable this use
+the following command.
+----
+cd build-arm64
+----
+
+Run ccmake:
+
+----
+ccmake ..
+----
+This ccmake.. command will open a GUI listing the available static Libraries 
+and available image options as below:
+
+--------
+BUILD_SHARED_LIBS                ON
+BUILD_STATIC_LIBS                ON
+BUILD_mepa                       ON
+IMG_arm64_vsc7558MSEC_ext4       OFF
+IMG_arm64_vsc7558TSN_ext4        OFF
+MEPA_aqr                         OFF
+MEPA_dummy_phy                   OFFCMAKE_BUILD_TYPE
+--------
+
+To enable the image generation for target `arm64_vsc7558` enable `IMG_arm64_vsc7558TSN_ext4`
+
+Press [enter] to edit option Press [d] to delete an entry CMake Version 3.16.3
+Press [c] to configure
+Press [h] for help Press [q] to quit without generating
+Press [t] to toggle advanced mode (Currently Off)
+
+Note:: To list of all targets available, use option 't' in the GUI:
+
+After enabling the necessary targets Press [c] to configure the targets.
+After configuration is complete Press [g] to generate Makefile with enabled targets.
+
+=== Building the SW
+
+Now that the project is configured, we just need to build it. This is the only
+step which needs to be repeated when the sources are changed.
+
+Use the normal make command to build (the `-jN` options specify how many cores
+to use).
+
+----
+$ make -j12
+....
+[ 93%] Linking C executable mesa-demo-vsc7558TSN
+[ 93%] Built target app_vsc7558TSN
+[100%] Generating arm64_vsc7558TSN.itb
+[100%] Generating arm64_vsc7558TSN.ext4.gz, arm64_vsc7558TSN.ubifs
+mkimage -q -f arm64_vsc7558TSN.its arm64_vsc7558TSN.itb
+[100%] Built target arm64_vsc7558TSN_itb
+[100%] Built target arm64_vsc7558TSN_ext4
+----
+
+After a while, the build will be done, and the resulting image can be found in
+`.build-arm64/mepa_demo`. Lets copy this to the tftp server folder.
+
+----
+$ cp mepa_demo/arm64_vsc7558TSN.itb /var/lib/tftpboot/.
+                        or 
+$ cp mepa_demo/arm64_vsc7558TSN.ext4.gz /var/lib/tftpboot/.
+----
+
+
+== Loading firmware image over network from UBoot
+
+UBoot is being used to load the SW over the network via TFTP and into memory.
+There are two type of images 'fit/itb' or 'ext4' where 
+* 'itb' - is a standard U-Boot image format, which is used for NOR only or network boot.
+         It can be used on all boards running U-Boot.
+* 'ext4' - This image type is using eMMC for storage. It is a standard Linux filesystem
+         image format, suitable for this storage type.
+
+   
+The system can then boot from memory.
+
+Connect a terminal to the reference board, open your serial terminal client
+(minicom, picocom, teraterm, putty), power up the board, and break the boot process in
+the UBoot console. 
+
+This is an example of booting an EDSx board, and breaking it into UBoot.
+
+----
+U-Boot 2023.04 (Apr 15 2024 - 11:18:03 +0530)sparx5
+
+CPU:   ARM A53
+Model: EDSX eMMC Reference Board
+DRAM:  2 GiB (1667 MHz, DDR3, 32bit, ECC, pcb135_ddr3 2023-07-21-13:44:16 98ff2c264618)
+Core:  30 devices, 17 uclasses, devicetree: fit
+MMC:   sdhci@600800000: 0
+Loading Environment from SPIFlash... SF: Detected sst26vf016b with page size 256 Bytes, erase size 4 KiB, total 2 MiB
+OK
+In:    serial@600100000
+Out:   serial@600100000
+Err:   serial@600100000
+Net:   eth0: switch@0
+Hit any key to stop autoboot:  0
+=>
+----
+
+=== Configure network
+
+If a DHCP server is being used at the network, then this is simply a matter of
+issuing the `dhcp` command:
+
+----
+# dhcp
+BOOTP broadcast 1
+BOOTP broadcast 2
+BOOTP broadcast 3
+DHCP client bound to address 10.99.10.10 (1003 ms)
+Using switch@1010000 device
+TFTP from server 10.99.10.1; our IP address is 10.99.10.10
+----
+
+If static IP configuration is desirable, then set the `ipaddr`, `netmask` and
+`gatewayip` accordingly:
+
+----
+setenv ipaddr 10.99.10.10
+setenv gatewayip 10.99.10.1
+setenv netmask 255.255.255.0
+----
+
+NOTE: To make the environment settings persistent, use the `saveenv` command.
+
+=== Load SW to Memory
+Final step is to load the SW into memory. To do this the `tftp` command is used.
+Remember to copy the firmware image into the tftp folder, and use the correct IP
+address of the tftp server and firmware filename (this example uses `10.99.10.1`
+as tftp server, and `firmware.ext` firmware file, replace with IP of your TFTP
+server, and actual file name of the firmware).
+
+==== Steps to Load ITB image to Memory
+Load the itb binary from the tftp server using the following tftpboot command
+
+----
+tftpboot ${loadaddr} 10.99.10.1:arm64_vsc7558TSN.itb
+----
+
+The Expected console output is provided below.
+----
+tftpboot ${loadaddr} 10.99.10.1:arm64_vsc7558TSN.itb
+switch@0 Waiting for PHY auto negotiation to complete........ done
+NPI Port: Up (internal)
+Using switch@0 device
+TFTP from server 192.168.1.2; our IP address is 10.99.10.1
+Filename 'arm64_vsc7558TSN.itb'.
+Load address: 0x740000000
+Loading: #################################################################
+         #################################################################
+         #################################################################
+         #################################################################
+         #################################################################
+         #################################################################
+         #################################################################
+         #################################################################
+         #################################################################
+         #################################################################
+         #################################################################
+         #################################################################
+         #################################################################
+         #################################################################
+         #################################################################
+         #################################################################
+         #################################################################
+         #################################################################
+         #################################################################
+         #################################################################
+         #################################################################
+         #################################################################
+         #################################################################
+         #################################################################
+         #################################################################
+         #################################################################
+         #################################################################
+         #################################################################
+         #################################################################
+         ###########################
+         7.4 MiB/s
+done
+Bytes transferred = 28054304 (1ac1320 hex)
+=>
+----
+
+==== Steps to Load EXT4 image to Memory
+Load the ext4 binary from the tftp server using the following tftpboot command
+
+----
+tftpboot ${fileaddr} 10.99.10.1:arm64_vsc7558TSN.ext4.gz
+----
+
+The Expected console output is provided below.
+----
+tftpboot ${fileaddr} 10.99.10.1:arm64_vsc7558TSN.ext4.gz
+switch@0 Waiting for PHY auto negotiation to complete....... done
+NPI Port: Up (internal)
+Using switch@0 device
+TFTP from server 192.168.1.2; our IP address is 10.99.10.1
+Filename 'arm64_vsc7558MSEC.ext4.gz'.
+Load address: 0x740000000
+Loading: #################################################################
+         #################################################################
+         #################################################################
+         #################################################################
+         #################################################################
+         #################################################################
+         #################################################################
+         #################################################################
+         #################################################################
+         #################################################################
+         ########### ....................................................
+         ....................... ########################################
+         ##########
+done
+Bytes transferred = 28379657 (1b10a09 hex)
+=>
+----
+
+Run the Following Command to extract the '.gz' type image and load it in
+mmcaddr.
+
+----
+unzip ${fileaddr} ${mmcaddr}
+----
+
+To flash the extracted image to emmc flash run the command 'run mmc_update'
+
+----
+=> run mmc_update
+
+MMC write: dev # 0, block # 2097186, count 229552 ... 229552 blocks written: OK
+----
+
+=== Booting the Firware Image (itb and ext4 image)
+Depending on image type and board, the steps to actually boot the image are
+slightly different.
+
+New ARM based designs only uses fit/itb images. MIPS targets can do both,
+but the default is still mfi
+
+==== Booting fit/itb images
+
+`fit` images may optional include multiple device tree configurations.
+
+To boot the `fit` image with a given configuration use the below mentioned
+command
+
+----
+run ramboot
+----
+
+The above command will boot the kernel and the console will display the below output.
+
+----
+run ramboot
+## Loading kernel from FIT Image at 740000000 ...
+   Using 'edsx_emmc' configuration
+   Trying 'kernel' kernel subimage
+     Description:  Linux kernel
+     Type:         Kernel Image
+     Compression:  gzip compressed
+     Data Start:   0x7400000d0
+     Data Size:    5361490 Bytes = 5.1 MiB
+     Architecture: AArch64
+     OS:           Linux
+     Load Address: 0x700080000
+     Entry Point:  0x700080000
+   Verifying Hash Integrity ... OK
+## Loading ramdisk from FIT Image at 740000000 ...
+   Using 'edsx_emmc' configuration
+   Trying 'ramdisk' ramdisk subimage
+     Description:  ramdisk
+     Type:         RAMDisk Image
+     Compression:  uncompressed
+     Data Start:   0x74051d0cc
+     Data Size:    22597632 Bytes = 21.6 MiB
+     Architecture: AArch64
+     OS:           Linux
+     Load Address: unavailable
+     Entry Point:  unavailable
+   Verifying Hash Integrity ... OK
+## Loading fdt from FIT Image at 740000000 ...
+   Using 'edsx_emmc' configuration
+   Trying 'fdt_edsx_emmc' fdt subimage
+     Description:  Flattened Device Tree blob
+     Type:         Flat Device Tree
+     Compression:  uncompressed
+     Data Start:   0x741ab0880
+     Data Size:    15862 Bytes = 15.5 KiB
+     Architecture: AArch64
+   Verifying Hash Integrity ... OK
+   Booting using the fdt blob at 0x741ab0880
+Working FDT set to 741ab0880
+   Uncompressing Kernel Image
+   Loading Ramdisk to 702a73000, end 704000000 ... OK
+   Loading Device Tree to 0000000702a6c000, end 0000000702a72df5 ... OK
+Working FDT set to 702a6c000
+   Reserved memory region for spin-table: addr=77ff3ee48 size=18
+   Reserved memory region for secure PSCI: addr=77ffb1000 size=3000
+
+Starting kernel ...
+
+Starting syslogd: OK
+Starting klogd: OK
+mount: mounting /dev/mmcblk0p3 on /mnt failed: Invalid argument
+FAILED to mount /dev/mmcblk0p3 at /mnt
+
+Welcome to SMBStaX
+vcoreiii login:
+----
+
+In the output above we see an image containing a `kernel`, `ramdisk`, `fdt`
+(device tree). These 3 component is grouped in a configuration called `fireant`.
+
+==== Booting ext4 image
+Once the image is loaded into the emmc flash using the command 'mmc_update' command
+the Kernel can be booted with following command.
+
+----
+run mmc_boot
+----
+The expected console output is provided below.
+
+----
+run mmc_boot
+5698260 bytes read in 128 ms (42.5 MiB/s)
+## Loading kernel from FIT Image at 740000000 ...
+   Using 'edsx_emmc' configuration
+   Trying 'kernel' kernel subimage
+     Description:  Linux kernel
+     Type:         Kernel Image
+     Compression:  gzip compressed
+     Data Start:   0x7400000d0
+     Data Size:    5361416 Bytes = 5.1 MiB
+     Architecture: AArch64
+     OS:           Linux
+     Load Address: 0x700080000
+     Entry Point:  0x700080000
+   Verifying Hash Integrity ... OK
+## Loading ramdisk from FIT Image at 740000000 ...
+   Using 'edsx_emmc' configuration
+   Trying 'ramdisk' ramdisk subimage
+     Description:  ramdisk
+     Type:         RAMDisk Image
+     Compression:  uncompressed
+     Data Start:   0x74051d080
+     Data Size:    241664 Bytes = 236 KiB
+     Architecture: AArch64
+     OS:           Linux
+     Load Address: unavailable
+     Entry Point:  unavailable
+   Verifying Hash Integrity ... OK
+## Loading fdt from FIT Image at 740000000 ...
+   Using 'edsx_emmc' configuration
+   Trying 'fdt_edsx_emmc' fdt subimage
+     Description:  Flattened Device Tree blob
+     Type:         Flat Device Tree
+     Compression:  uncompressed
+     Data Start:   0x74055e834
+     Data Size:    15862 Bytes = 15.5 KiB
+     Architecture: AArch64
+   Verifying Hash Integrity ... OK
+   Booting using the fdt blob at 0x74055e834
+Working FDT set to 74055e834
+   Uncompressing Kernel Image
+   Loading Ramdisk to 703fc5000, end 704000000 ... OK
+   Loading Device Tree to 0000000703fbe000, end 0000000703fc4df5 ... OK
+Working FDT set to 703fbe000
+   Reserved memory region for spin-table: addr=77ff3ee48 size=18
+   Reserved memory region for secure PSCI: addr=77ffb1000 size=3000
+
+Starting kernel ...
+
+Starting syslogd: OK
+Starting klogd: OK
+mount: mounting /dev/mmcblk0p3 on /mnt failed: Invalid argument
+FAILED to mount /dev/mmcblk0p3 at /mnt
+
+Welcome to SMBStaX
+vcoreiii login:
+#
+----
+
+== Starting MEPA Demo Application
+When the system boots, you will need to login to the Linux terminal. Login as
+the `root` user with no password.
+
+----
+Welcome to SMBStaX
+vcoreiii login: root
+----
+
+We now have a normal Linux command line interface. Where we can start the MESA
+demo application using the command `mepa-demo-edsx`:
+
+----
+$ mepa-demo-edsx
+----
+
+This will run in the background as a daemon in the background, and allow the
+`mepa-cmd` to issue commands.
+
+To see the list of valid commands use the `mepa-cmd` with no argument.
+
+== Persisting firmware image in flash from UBoot
+
+Depending on the board, there might be several storage options,
+depending on image size and performance requirements.
+
+* `NOR` flash
+* `eMMC` flash
+
+`NOR` flash is available on all platforms. Depending on board type,
+the size may be more or less restricted. On some boards it is as low
+as 16 Mb, which requires additional software storage on `NAND`. The
+`NOR` flash also holds the boot-loader.
+
+`eMMC` is available on SparX5(i) boards. It is currently the default for
+PCB135 boards, but can be enabled for other boards (PCB134) as
+well. `eMMC` provides superior performance compared to `NAND`, and
+also has higher capacity.
+
+Depending on the `NOR` capacity and the image size, it may be possible
+to configure a board to solely use `NOR`. This option is referred to
+as _NOR only_.
+
+Depending on how you want to boot the firmware, you will need to use
+one of several image types:
+
+* `MFI`: This is a proprietary image format, which is used for `NOR`
+  in conjunction with `NAND`. It is typically used on the MIPS-based boards.
+
+* `FIT`: This is a standard U-Boot image format, which is used for
+  _NOR only_ or network boot. It can be used on all boards running
+  U-Boot. (It uses the `.itb` suffix, which is why it sometimes also
+  is called `ITB`).
+
+* `ubifs`: This image type is used for SparX5(i)-based boards using
+  `NAND` for storage. It is a standard Linux filesystem image format,
+  suitable for this storage type.
+
+* `ext4.gz`: This image type is used for SparX5(i)-based boards using
+  `eMMC` for storage. It is a standard Linux filesystem image format,
+  suitable for this storage type.
+
+=== Flashing boards using U-Boot
+
+When preparing a board for flashing, make sure that:
+
+1. You have the latest U-Boot installed. (And have booted it!).
+2. You have reset the U-Boot environment. Do so by the following steps:
+   * `env default -a`
+   * `env save`
+
+U-boot typically contain pre-coded command sequences in the
+environment, which is why it is crucial to reset this to default
+_after_ upgrading.
+
+==== Flashing EDSx for `NOR` boot
+
+Before flashing the board, the `NOR` flash must first be partitioned.
+
+Do so by executing `run nor_only` at the U-Boot prompt.
+
+------------------------------
+=> run nor_only
+Saving Environment to SPI Flash... Erasing SPI flash...Writing to SPI flash...done
+Valid environment: 1
+OK
+=> mtd list
+List of MTD devices:
+* nor0
+ - type: NOR flash
+ - block size: 0x1000 bytes
+ - min I/O: 0x1 bytes
+ - 0x000000000000-0x000008000000 : "nor0"
+         - 0x000000000000-0x000000100000 : "UBoot"
+         - 0x000000100000-0x000000140000 : "Env"
+         - 0x000000140000-0x000000180000 : "Env.bk"
+         - 0x000000180000-0x000001580000 : "linux"
+         - 0x000001580000-0x000002980000 : "linux.bk"
+         - 0x000002980000-0x000004980000 : "rootfs_data"
+...
+------------------------------
+
+The `nor_parts` environment variable is used to subdivide the `NOR`
+flash. If you have other capacity requirements, you can edit/change
+the `nor_parts` variable _before_ running `nor_only`.
+
+Once you have partitioned the `NOR`, download the `FIT` image for your
+build and use the following commands to flash the device:
+
+* `env set nor_image somepath/image.itb`
+* `run nor_dlup`
+
+For example:
+
+-------------------------------
+=> env set nor_image somepath/image.itb
+=> run nor_dlup
+...
+Using switch@0 device
+TFTP from server 10.10.137.100; our IP address is 10.10.137.12
+Filename 'somepath/image.itb'.
+Load address: 0x740000000
+Loading: #################################################################
+         #################################################################
+         ...
+         #################################################################
+         #################################################################
+         #################################################################
+         #########################################################
+         1.5 MiB/s
+done
+Bytes transferred = 15786816 (f0e340 hex)
+SF: Detected mx66l1g45g with page size 256 Bytes, erase size 4 KiB, total 128 MiB
+device 0 offset 0x180000, size 0xf0e340
+11989824 bytes written, 3796992 bytes skipped in 142.438s, speed 113574 B/s
+-------------------------------
+
+After this, the default `bootcmd` being `run nor_boot` should start
+the firmware installed.
+
+== MEPA-DEMO Appl Command Examples
+
+Get help on the port state command.
+
+----
+# mepa-cmd port state help
+ Description:
+ ------------
+ Set or show the port administrative state.
+
+ Syntax:
+ -------
+ Port State [<port_list>] [enable|disable]
+
+ Parameters:
+ -----------
+ <port_list>: Port list, default: All ports
+ enable     : Enable
+ disable    : Disable
+ (default: Show mode)
+----
+
+----
+# mepa-cmd port state
+Port  State     Mode    Flow Control  Rx Pause  Tx Pause  MaxFrame  Link
+----  --------  ------  ------------  --------  --------  --------  --------
+1     Enabled   Auto    Enabled       Enabled   Enabled   1518      1Gfdx
+2     Enabled   Auto    Enabled       Enabled   Enabled   1518      1Gfdx
+3     Enabled   1Gfdx   Disabled      Disabled  Disabled  1518      Down
+4     Enabled   1Gfdx   Disabled      Disabled  Disabled  1518      Down
+5     Enabled   1Gfdx   Disabled      Disabled  Disabled  1518      Down
+6     Enabled   1Gfdx   Disabled      Disabled  Disabled  1518      1Gfdx
+7     Enabled   10Gfdx  Disabled      Disabled  Disabled  1518      Down
+8     Enabled   10Gfdx  Disabled      Disabled  Disabled  1518      Down
+9     Enabled   Auto    Enabled       Enabled   Enabled   1518      1Gfdx
+#
+----
+
+Get help on the port statistics command:
+
+----
+# mepa-cmd port stati help
+ Description:
+ ------------
+ Show port statistics.
+
+ Syntax:
+ -------
+ Port Statistics [<port_list>] [clear|packets|bytes|errors|discards]
+
+ Parameters:
+ -----------
+ <port_list>: Port list, default: All ports
+ clear      : Clear port statistics
+ packets    : Show packet statistics
+ bytes      : Show byte statistics
+ errors     : Show error statistics
+ discards   : Show discard statistics
+ (default: Show all port statistics)
+----
+
+Show packet counters for port 1-8:
+
+----
+# mepa-cmd port stati 1-8 pac
+Port  Rx Packets          Tx Packets
+----  ------------------  ------------------
+1     50                  0
+2     0                   50
+3     0                   0
+4     0                   0
+5     0                   0
+6     0                   0
+7     0                   0
+8     76                  0
+----
+
+Dump API/AIL state for port 1-4:
+
+----
+# mepa-cmd deb api ail port 1-4
+ Application Interface Layer
+ ===========================
+
+ Port
+ -----
+
+ Mapping:
+
+ Port  Chip Port  Chip  Max BW  MIIM Bus  MIIM Addr  MIIM Chip
+ 0     0          0     1G      0         0          0
+ 1     1          0     1G      0         1          0
+ 2     2          0     1G      -1        0          0
+ 3     3          0     1G      -1        0          0
+
+ Configuration:
+
+ Port  Interface    Serdes     Speed     Aneg  Obey      Generate  Max Length
+ 0     SGMII        SGMII      1Gfdx     No    Enabled   Enabled   1518+0
+ 1     SGMII        SGMII      1Gfdx     No    Enabled   Enabled   1518+0
+ 2     SERDES       1000BaseX  1Gfdx     No    Disabled  Disabled  1518+0
+ 3     SERDES       1000BaseX  1Gfdx     No    Disabled  Disabled  1518+0
+ 
+ Forwarding:
+
+ Port  State  Forwarding  STP State   Auth State  Rx Fwd    Tx Fwd    Aggr Fwd
+ 0     Up     Enabled     Forwarding  Both        Enabled   Enabled   Enabled
+ 1     Up     Enabled     Forwarding  Both        Enabled   Enabled   Enabled
+ 2     Down   Enabled     Forwarding  Both        Disabled  Disabled  Disabled
+ 3     Down   Enabled     Forwarding  Both        Disabled  Disabled  Disabled
+----
+
+Show all trace levels:
+
+----
+# mepa-cmd deb tr
+ Module   Group       Level
+ -------  ----------  -----
+ api_ail  afi         error
+ api_ail  clock       error
+ api_ail  default     error
+ api_ail  emul        error
+ api_ail  evc         error
+ api_ail  fdma        error
+ api_ail  fdma_irq    error
+ api_ail  hqos        error
+ api_ail  hwprot      error
+ api_ail  l2          error
+ api_ail  l3          error
+ api_ail  macsec      error
+ api_ail  mpls        error
+ api_ail  oam         error
+ api_ail  packet      error
+ api_ail  phy         error
+ api_ail  port        error
+ api_ail  qos         error
+ api_ail  reg_check   error
+ api_ail  security    error
+ api_ail  ts          error
+ api_ail  vcap        error
+ api_cil  afi         error
+ api_cil  clock       error
+ api_cil  default     error
+ api_cil  emul        error
+ api_cil  evc         error
+ api_cil  fdma        error
+ api_cil  fdma_irq    error
+ api_cil  hqos        error
+ api_cil  hwprot      error
+ api_cil  l2          error
+ api_cil  l3          error
+ api_cil  macsec      error
+ api_cil  mpls        error
+ api_cil  oam         error
+ api_cil  packet      error
+ api_cil  phy         error
+ api_cil  port        error
+ api_cil  qos         error
+ api_cil  reg_check   error
+ api_cil  security    error
+ api_cil  ts          error
+ api_cil  vcap        error
+ cli      default     error
+ debug    default     error
+ ip       default     error
+ json_rpc default     error
+ mac      default     error
+ main     default     error
+ main     meba        error
+ port     default     error
+ regio    default     error
+ symreg   default     error
+ test     default     error
+ vlan     default     error
+
+----
+
+Enable debug trace for port API at AIL and show the trace level:
+
+----
+# mepa-cmd deb tr api_ail port debug
+# mepa-cmd deb tr api_ail port
+ Module   Group       Level
+ -------  ----------  -----
+ api_ail  port        debug
+----
+
+Read chip ID in different ways using symbolic register access:
+
+----
+# mepa-cmd debug sym read help
+ Description:
+ ------------
+ Read one/many switch register(s).
+
+ Syntax:
+ -------
+ Debug Sym Read <word128>
+
+ Parameters:
+ -----------
+<word128>: Register pattern on the form 'target[t]:reggrp[g]:reg[r]', where
+        'target' is the name of the target (e.g. dev).
+        'reggrp' is the name of the register group.
+        'reg'    is the name of the register.
+        t        is a list of target replications if applicable.
+        g        is a list of register group replications if applicable.
+        r        is a list of register replications if applicable.
+        If a given replication (t, g, r) is omitted, all applicable replications will be accessed.
+        Both 'target', 'reggrp' and 'reg' may be omitted, which corresponds to wildcarding that part
+        of the name. Matches are exact, but wildcards ('*', '?') are allowed.
+# mepa-cmd debug sym read devcpu_gcb:chip_regs:chip_id
+Register                     Value      Decimal    31     24 23     16 15      8 7       0
+DEVCPU_GCB:CHIP_REGS:CHIP_ID 0x174150e9  390156521 0001.0111.0100.0001.0101.0000.1110.1001
+1 match found
+# mepa-cmd debug sym read devcpu_gcb::chip_id
+Register                     Value      Decimal    31     24 23     16 15      8 7       0
+DEVCPU_GCB:CHIP_REGS:CHIP_ID 0x174150e9  390156521 0001.0111.0100.0001.0101.0000.1110.1001
+1 match found
+# mepa-cmd debug sym read ::chip_id
+Register                     Value      Decimal    31     24 23     16 15      8 7       0
+DEVCPU_GCB:CHIP_REGS:CHIP_ID 0x174150e9  390156521 0001.0111.0100.0001.0101.0000.1110.1001
+1 match found
+# mepa-cmd debug sym read ::chip*
+Register                     Value      Decimal    31     24 23     16 15      8 7       0
+DEVCPU_GCB:CHIP_REGS:CHIP_ID 0x174150e9  390156521 0001.0111.0100.0001.0101.0000.1110.1001
+1 match found
+
+----
