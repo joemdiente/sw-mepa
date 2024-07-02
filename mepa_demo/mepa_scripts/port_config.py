@@ -36,11 +36,14 @@ class PortConfig:
                This will attach the dev to the serdes ports of EDS X
                if the platform is not EDSX the error will be displayed here
 
+               3. # mepa-cmd dev conf {} -f filename
+               This will configure the dev from the file file should be present in
+               /root/mepa_scripts/
 
                This is an automated step and the steps should be followed in the same
                order, when used with mepa-cmd
                {}
-              """.format('-'*80, self.port_no, self.port_no, self.port_no, self.port_no, '-'*80)
+              """.format('-'*80, self.port_no, self.port_no, self.port_no, self.port_no, self.port_no, '-'*80)
         print (st)
 
     def mepa_cmd(self, cmd):
@@ -56,11 +59,6 @@ class PortConfig:
         return os.system("{} 2>&1 > /dev/null".format(call_api))
 
 def main():
-    conf_set = open("port_config.json", "r")
-    string = conf_set.read()
-    string = string.readlines()[3:]
-    string = string.split("}\n")
-    print (string[0])
     parser = optparse.OptionParser()
 
     parser.add_option('-p', dest = 'port',
@@ -69,16 +67,22 @@ def main():
     parser.add_option('-i', dest = 'interface',
                       type = 'string',
                       help = 'specify the interface')
-
+    parser.add_option('-f', dest = 'file',
+                      type = 'string',
+                      help = 'specify the file') 
     (options, args) = parser.parse_args()
-
+    
     if (options.port == None):
             print (parser.usage)
             exit(0)
     else:
             port_no = options.port
 
-
+    if (options.file == None):
+            print (parser.usage)
+            exit(0)
+    else:
+            file_name = options.file
     Pc = PortConfig(port_no)
     Pc.usage()
 
@@ -107,18 +111,11 @@ def main():
         exit(0)
 
     #step 3
-    conf_set = open("port_config.json", "r")
-    string = conf_set.read()
-    string = string.strip("# Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries. \
-                           # SPDX-License-Identifier: MIT")
-    string = string.split("}\n")
-    for i in range(len(string) - 1):
-        cmd = string[i].split("=>")
-        api = cmd[0].replace("\n", "")
-        json_str = cmd[1]
-        json_str = json_str.replace("\n", "")
-        json_str = json_str.replace(" ", "")
-        json_call = Pc.mepa_cmd_json_api(json_str, api)
+    
+    rc = Pc.mepa_cmd("mepa-cmd dev conf {} -f {}".format(port_no, file_name))
+    if (int(rc) != 0):
+        print ("Error in configuring the device")
+        exit(0)
 
 if __name__ == "__main__":
     main()

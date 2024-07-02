@@ -76,7 +76,7 @@ end
   next if /mepa_demo.docs.resources.bootstrap/ =~ f
 
   next if /.cmake\/docker\/SimpleGridClient/ =~ f
-
+  next if "mepa_demo/mepa_scripts/port_config_json.json" == f 
   next if [".vsd", ".svg", ".png", ".graphml", ".xls", ".txt"].include? ext
   next if [".gitattributes", ".gitignore", "Gemfile.lock", "catch.hpp", "TODO"].include? base
 
