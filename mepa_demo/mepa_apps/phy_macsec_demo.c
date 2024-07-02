@@ -521,7 +521,6 @@ static void cli_cmd_match_conf(cli_req_t *req)
         T_E("\n Invalid Pattern matching Parameter\n");
         return;
     }
-    cli_printf("\n Pattern Match value is : %d\n", pattern_match.match);
     pattern_match.priority            = MEPA_MACSEC_MATCH_PRIORITY_HIGH;
     pattern_match.is_control          = TRUE;
     pattern_match.etype               = pattern_values.pattern_ethtype;
@@ -741,7 +740,7 @@ static void cli_cmd_tx_sa_create(cli_req_t *req)
     char myString[MAX_STRING_LEN];
     char filestring[MAX_WORD_COUNT];
     char file_location[] = "/root/";
-    cli_printf("\n\n");
+    cli_printf("\n");
     cli_printf("\td - Default File for MACsec SAK \"macsec_key.json\"");
     cli_printf("\n\tEnter MACsec SAK File Name default(press d) or enter file name : ");
     memset(filename, 0, sizeof(filename));
@@ -837,7 +836,7 @@ static void cli_cmd_rx_sa_create(cli_req_t *req)
     char myString[MAX_STRING_LEN];
     char filestring[MAX_WORD_COUNT];
     char file_location[] = "/root/";
-    cli_printf("\n\n");
+    cli_printf("\n");
     cli_printf("\td - Default File for MACsec SAK \"macsec_key.json\"");
     cli_printf("\n\tEnter MACsec SAK File Name default(press d) or enter file name : ");
     memset(filename, 0, sizeof(filename));
@@ -1442,7 +1441,7 @@ static void cli_cmd_macsec_frame_get(cli_req_t *req)
         }
         cli_printf("\n Frame Captured on Port %d", iport);
         cli_printf("\n===============================================\n\n");
-        cli_printf("\n\n Length of Frame Captured : %d\n", frame_length);
+        cli_printf("\n Length of Frame Captured : %d\n", frame_length);
         for(int j = 0; j < frame_length; j++) {
             if(j%16 == 0) {
                 cli_printf("\n0x");
@@ -1453,7 +1452,7 @@ static void cli_cmd_macsec_frame_get(cli_req_t *req)
             }
             cli_printf("%02x ", frame[j]);
         }
-        cli_printf("\n\n\n");
+        cli_printf("\n");
     }
     return;
 }
@@ -1786,19 +1785,19 @@ static void cli_cmd_macsec_conf_get(cli_req_t *req)
         cli_printf("%-25s : %s\n","Active", active ? "Yes" : "No");
         cli_printf("%-25s :", "Key");
         for(int i = 0; i < MAX_KEY_LEN; i++) {
-            cli_printf(" %d,", sak.buf[i]);
+            cli_printf(" %d", sak.buf[i]);
             if(i < MAX_KEY_LEN - 1)
                 cli_printf(",");
         }
         cli_printf("\n%-25s :", "Hash Key");
         for(int i = 0; i < MAX_HASK_KEY_LEN; i++) {
-            cli_printf(" %d,", sak.h_buf[i]);
+            cli_printf(" %d", sak.h_buf[i]);
             if(i < MAX_HASK_KEY_LEN - 1)
                 cli_printf(",");
         }
         cli_printf("\n%-25s :", "Salt");
         for(int i = 0; i < MAX_SALT_KEY_LEN; i++) {
-            cli_printf(" %d,", sak.salt.buf[i]);
+            cli_printf(" %d", sak.salt.buf[i]);
             if(i < MAX_SALT_KEY_LEN - 1)
                 cli_printf(",");
         }
@@ -1826,7 +1825,7 @@ static void cli_cmd_cltr_frame_set(cli_req_t *req)
     cli_printf("\n 3 = DMAC and Ethertype Match");
     cli_printf("\n\n Parameter that needs to be Matched : ");
     scanf("%d", &match);
-    cli_printf("\n\n");
+    cli_printf("\n");
     switch(match) {
     case 1:
         conf.match = MEPA_MACSEC_MATCH_DMAC;
@@ -1870,6 +1869,8 @@ static void cli_cmd_cltr_frame_get(cli_req_t *req)
             return;
         }
         if(conf.match > 1) {
+            cli_printf("\n %-10d%-15d%02d-%02d-%02d-%02d-%02d-%02d", i, conf.etype, conf.dmac.addr[0], conf.dmac.addr[1], conf.dmac.addr[2],
+                      conf.dmac.addr[3], conf.dmac.addr[5], conf.dmac.addr[6]); 
             if(conf.match == MEPA_MACSEC_MATCH_DMAC) {
                 cli_printf("   %s\n", "DMAC");
             } else if(conf.match == MEPA_MACSEC_MATCH_ETYPE) {
@@ -1895,6 +1896,68 @@ static void cli_cmd_cltr_frame_del(cli_req_t *req)
             T_E("\n Error in Geting Control Match Configuration on port : %d \n", req->port_no);
             return;
         }
+    }
+    return;
+}
+
+static void cli_cmd_macsec_inst_get(cli_req_t *req)
+{
+    mepa_rc rc;
+
+    mepa_port_no_t  port_no;
+    for(int iport = 0; iport < MAX_PORTS; iport++) {
+        port_no = iport2uport(iport);
+        if (req->port_list[port_no] == 0) {
+            continue;
+        }
+
+        if ((rc = mepa_dev_check(meba_macsec_instance, iport)) != MEPA_RC_OK) {
+            cli_printf(" Dev is Not Created for the port : %d\n", port_no);
+            return;
+        }
+
+        mepa_macsec_inst_count_t inst_get;
+        if ((rc = mepa_macsec_inst_count_get(meba_macsec_instance->phy_devices[iport], iport, &inst_get)) != MEPA_RC_OK) {
+            T_E("\n Error in Getting MACsec Instances on the Port : %d \n", port_no);
+            return;
+        }
+        cli_printf("\n\n");
+        cli_printf("MACsec Instance Statisitics on port no %d\n", iport);
+        cli_printf("=============================================================\n");
+        cli_macsec_statistics("Number of SecYs","NULL", inst_get.no_secy, 0);
+        cli_printf("%-30s %s", "SecY Port ids", ":");
+        for(int i = 0; i < inst_get.no_secy; i++) {
+            cli_printf(" %d,", inst_get.secy_vport[i]);
+        }
+        cli_printf("\n\n");
+        cli_printf("SecY id   No of Txsc   No of TxSA   TxSA Id            No of Rx SC    Rx SC Ids(No of SA in SC)");
+        cli_printf("\n=================================================================================================\n");
+        if(inst_get.no_secy == 0) {
+            cli_printf("\n  --         --           --          --                   --                  --\n");
+        }
+		for(int i = 0; i < inst_get.no_secy; i++) {
+            cli_printf("%    -12d%-13d%-13d", inst_get.secy_vport[i], inst_get.secy_inst_count[i].no_txsc, inst_get.secy_inst_count[i].txsc_inst_count.no_sa);
+            if(inst_get.secy_inst_count[i].txsc_inst_count.no_sa == 0) {
+                cli_printf("%-20s", "--");
+            }
+            for(int k = 0; k < inst_get.secy_inst_count[i].txsc_inst_count.no_sa; k++) {
+                cli_printf(" %d,",inst_get.secy_inst_count[i].txsc_inst_count.sa_id[k]);
+                if(k == (inst_get.secy_inst_count[i].txsc_inst_count.no_sa - 1)) {
+                    for(int j = 0; j < (20 - (3 *inst_get.secy_inst_count[i].txsc_inst_count.no_sa)); j++) {
+                        cli_printf(" ");
+                    }
+                }
+            }
+            cli_printf("%-11d", inst_get.secy_inst_count[i].no_rxsc);
+            for(int j = 0; j < inst_get.secy_inst_count[i].no_rxsc; j++) {
+                cli_printf(" %d (%d),", inst_get.secy_inst_count[i].rx_sci[j].port_id, inst_get.secy_inst_count[i].rxsc_inst_count[j].no_sa);
+            }
+            if(inst_get.secy_inst_count[i].no_rxsc == 0) {
+                cli_printf(" ---------");
+            }
+            cli_printf("\n");
+        }
+        cli_printf("\n");
     }
     return;
 }
@@ -2449,7 +2512,14 @@ static cli_cmd_t cli_cmd_macsec_table[] = {
         "ctrl_frame del <port_no> <rule_list>",
         "Delete the Configured rule for 802.1X Control Traffic bypass",
         cli_cmd_cltr_frame_del,
+    },
+
+    {
+        "inst_get <port_list>",
+        "Indicates number of SecY,SC,SAs created on Physical port",
+        cli_cmd_macsec_inst_get,
     }
+
 };
 
 
