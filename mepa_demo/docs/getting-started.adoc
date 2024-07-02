@@ -34,6 +34,10 @@ they are expected to need other dependencies not documented here.
 When loading the firmware, this guide assumes that the Linux development machine
 is located at the same network as the reference board.
 
+NOTE: If you aldready have the build image for EDSx `arm64_vsc7558XXX.itb` or 
+`arm64_vsc7558XXX.ext4`, then you can direclty jump to Section 7 to know how to
+load this binary images to EDSx Board. 
+
 === Installing basic SW dependencies
 
 The first step is to install a couple of host tools needed by MESA. The packet

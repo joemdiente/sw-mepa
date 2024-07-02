@@ -121,7 +121,7 @@ hashChange = function(e) {
         }
 
     } else if (hash.length == 0) {
-        page = pages["mepa/docs/readme"];
+        page = pages["mepa_demo/docs/introduction"];
 
     } else {
         const split = hash.split('@');

@@ -25,6 +25,10 @@ Test will not be performed on that Port.
 == Directory
  * `./mepa_demo/mepa_apps/phy_kat_demo.c` - Source Code for KAT Demo Sample Application.
 
+== Prerequisites
+To Test KAT Demo Application User have to use either `arm64vsc7888MSEC.itb` or 
+`arm64_vsc7558MSEC.ext4` image to EDSx Platform.
+
 == Procedure to run KAT Demo Application
 
 To Run KAT Demo Application the 'mepa-demo' application needs to be running.
@@ -39,6 +43,10 @@ The command 'kat demo' accepts either 'xpn' or 'non-xpn' as the input which
 differentiaties the cipher suit selected by MACsec Engine, where xpn will select
 'AES-GCM-XPN-256' cipher suit and non-xpn selects 'AES-GCM-256' cipher suit to
 perform MACsec Encryption and Decryption.
+
+Note:: MACsec Block Supports 128-bit Cipher suit and 256-bit Cipher Suit, but KAT 
+demo covers only XPN-256 bit and NON-XPN 256 bit Cipher suit. MACsec Operational
+Demo Application covers both 128-bit and 256-bit Key reffer link:#mepa_demo/docs/macsec-demo[MACsec-Demo] section. 
 
 Below is the example of KAT demo application running on EDSx Switch with Malibu10G
 PHY Connected to EDSx Switch.
