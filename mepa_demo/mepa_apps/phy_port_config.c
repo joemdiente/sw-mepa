@@ -14,7 +14,8 @@
 
 static mepa_callout_t mepa_callout;
 static mepa_board_conf_t board_conf = {};
-static mepa_callout_ctx_t callout_ctx ;
+static mepa_callout_ctx_t **callout_ctx = NULL;
+static mepa_port_no_t port_cnt;
 static mscc_appl_trace_module_t trace_module = {
     .name = "phy_port_config"
 };
@@ -42,12 +43,7 @@ typedef struct {
 
 meba_inst_t meba_phy_inst;
 
-
-static int mepa_drv_create(const mepa_port_no_t port_no) {
-    cli_printf("\n creating dev\n");
-    meba_port_entry_t   entry;
-    mepa_phy_info_t phy_info = {0};
-
+static int phy_assign_callout(void) {
     mepa_callout.mmd_read = meba_mmd_read;
     mepa_callout.mmd_read_inc = meba_mmd_read_inc;
     mepa_callout.mmd_write = meba_mmd_write;
@@ -59,32 +55,60 @@ static int mepa_drv_create(const mepa_port_no_t port_no) {
     mepa_callout.mem_free = mem_free;
     mepa_callout.spi_read = mepa_phy_spi_read;
     mepa_callout.spi_write = mepa_phy_spi_write;
+    return MEPA_RC_OK;
+}
 
+static int mepa_drv_create(const mepa_port_no_t port_no) {
+    cli_printf("\n creating dev\n");
+    meba_port_entry_t   entry;
+    mepa_phy_info_t phy_info = {0};
+    port_cnt = meba_phy_inst->api.meba_capability(meba_phy_inst, MEBA_CAP_BOARD_PORT_COUNT);
+    if(port_cnt <= 0) {
+        T_E("Invalid port number from meba\n");
+        return MESA_RC_ERROR;
+    }
+    if(callout_ctx == NULL) {
+        callout_ctx = (mepa_callout_ctx_t **) malloc(sizeof(mepa_callout_ctx_t *) * port_cnt);
+        if (callout_ctx == NULL ) {
+            T_E("Fatal: failed to allocate %d bytes.\n", (sizeof(mepa_callout_ctx_t) * port_cnt));
+            return MESA_RC_ERROR;
+        }
+    }
+    if(!memset(callout_ctx, 0, sizeof(mepa_callout_ctx_t *) * port_cnt)) {
+        T_E("memset to 0 failed for callout_ctx\n");
+        return MESA_RC_ERROR;
+    }
+    if(callout_ctx[port_no] == NULL) {
+        callout_ctx[port_no] = (mepa_callout_ctx_t *) malloc(sizeof(mepa_callout_ctx_t));
+        if (callout_ctx[port_no] == NULL) {
+            T_E("Fatal: failed to allocate %d bytes.\n", (sizeof(mepa_callout_ctx_t) * port_cnt));
+            return MESA_RC_ERROR;
+        }
+    }
     meba_phy_inst->api.meba_reset(meba_phy_inst, MEBA_ENTRY_PHY_SET);
     meba_phy_inst->api.meba_port_entry_get(meba_phy_inst, port_no, &entry);
 
-    callout_ctx.inst = 0;
-    callout_ctx.port_no = port_no;
-    callout_ctx.meba_inst = meba_phy_inst;
-    callout_ctx.miim_controller = entry.map.miim_controller;
-    callout_ctx.miim_addr = entry.map.miim_addr;
-    callout_ctx.chip_no = entry.map.chip_no;
-
+    callout_ctx[port_no]->inst = 0;
+    callout_ctx[port_no]->port_no = port_no;
+    callout_ctx[port_no]->meba_inst = meba_phy_inst;
+    callout_ctx[port_no]->miim_controller = entry.map.miim_controller;
+    callout_ctx[port_no]->miim_addr = entry.map.miim_addr;
+    callout_ctx[port_no]->chip_no = entry.map.chip_no;
     board_conf.numeric_handle = port_no;
     board_conf.vtss_instance_create = (board_conf.vtss_instance_ptr == NULL)?1:0;
     board_conf.vtss_instance_use = (board_conf.vtss_instance_ptr == NULL)?0:1;
-
-    mepa_device_t *dev = mepa_create(&(mepa_callout),
-                                     &(callout_ctx),
-                                     &board_conf);
 
     if(meba_phy_inst->phy_devices[port_no]) {
         T_E("Device Already existing on %d", port_no);
         return MESA_RC_ERROR;
     }
-    if(dev != NULL) {
-        meba_phy_inst->phy_devices[port_no] = dev;
-        meba_phy_inst->phy_device_ctx[port_no] = callout_ctx;
+
+    meba_phy_inst->phy_devices[port_no] = mepa_create(&(mepa_callout),
+                                          callout_ctx[port_no],
+                                          &board_conf);
+
+    if(meba_phy_inst->phy_devices[port_no]) {
+        meba_phy_inst->phy_device_ctx[port_no] = *callout_ctx[port_no];
         T_I("Phy has been probed on port %d, MAC I/F = %d", port_no, entry.mac_if);
     } else {
         T_E("Probe failed on %d", port_no);
@@ -120,6 +144,7 @@ static int mepa_drv_create(const mepa_port_no_t port_no) {
     }
     cli_printf("Dev created for port_no %d , id is dec:(%d) : hex(%x)\n", port_no, phy_info.part_number, phy_info.part_number);
     return MESA_RC_OK;
+
 }
 
 
@@ -127,9 +152,26 @@ static int mepa_drv_create(const mepa_port_no_t port_no) {
 static int mepa_drv_del(const mepa_port_no_t port_no) {
     cli_printf("\nDeleting dev port_no %u\n", port_no);
     if(meba_phy_inst->phy_devices[port_no]) {
-        mepa_delete(meba_phy_inst->phy_devices[port_no]);
+        if(mepa_delete(meba_phy_inst->phy_devices[port_no]) != MEPA_RC_OK) {
+            T_E("Unable to delete the mepa device %d", port_no);
+            return MESA_RC_ERROR;
+        }
+        if(!memset(&meba_phy_inst->phy_device_ctx[port_no], 0, sizeof(mepa_callout_ctx_t))) {
+            T_E("Unable to assign phy_device_ctx to 0 %d", port_no);
+            return MESA_RC_ERROR;
+        }
         meba_phy_inst->phy_devices[port_no] = NULL;
         board_conf.vtss_instance_ptr = NULL;
+        if(callout_ctx[port_no]) {
+            free(callout_ctx[port_no]);
+            callout_ctx[port_no] = NULL;
+        }
+        for(int i = 0; i < port_cnt; i++) {
+            if(callout_ctx[i] != NULL)
+                return MESA_RC_OK;
+        }
+        free(callout_ctx);
+        callout_ctx = NULL;
     }
     else {
         T_E("No Dev created for port_no %d\n", port_no);
@@ -353,12 +395,17 @@ void mscc_appl_phy_init(mscc_appl_init_t *init)
     case MSCC_INIT_CMD_INIT:
         if(phy_cli_init() != MEPA_RC_OK)
             T_E("Couldn't load port config module");
+        if(phy_assign_callout() != MEPA_RC_OK)
+            T_E("Couldn't assign the callout");
         break;
-
     default:
         break;
     }
 }
+
+
+
+
 
 
 
