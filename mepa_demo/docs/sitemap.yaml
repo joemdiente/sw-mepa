@@ -20,4 +20,14 @@ pages:
         - src: "mepa_demo/docs/port-config.adoc"
         - src: "mepa_demo/docs/kat-demo.adoc"
         - src: "mepa_demo/docs/macsec-demo.adoc"
+
+    - name: "MEPA App Reference"
+      pages:
+        - src: "mepa_demo/mepa_apps/phy_port_config.c"
+    - name: "MEPA .h referenc"
+      pages:
+        - src:  "sw-mesa/me/include/microchip/ethernet/common.h"
+        - src:  "mepa/include/microchip/ethernet/phy/api/types.h"
+        - src:  "mepa/include/microchip/ethernet/phy/api/phy.h"
+        - src:  "mepa/include/microchip/ethernet/phy/api.h"
 ---

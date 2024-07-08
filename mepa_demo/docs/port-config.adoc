@@ -1,2 +1,131 @@
 // Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
 // SPDX-License-Identifier: MIT
+
+
+= Port Config Application
+
+== Introduction.
+
+To enable the PHY for data traffic we need the configurations in the line and host side of the PHY
+
+[ditaa]
+....
+                            +---------------+
+   Host Side/ Mac Side      |               |       Line Side/ Media Side
+                            |               |  	    
+   (Towards MAC side)       |      PHY      |       (Towards LinkPartner side)
+                            |               |                                       
+                            |               |
+                            +---------------+
+ 
+....
+
+
+The Host side of the PHY support interfaces like (qsgmii, sgmii, rgmii, qxgmii, sxgmii, xgmii, xaui, sfi .. etc) 
+and Line side interfaces like copper/fiber media (this includes the automotive standards)
+
+Available interfaces in MEPA for Host/MAC interfaces is `mesa_port_interface_t` and Line/MEDIA interfaces 
+is `mesa_phy_media_interface_t` 
+
+With the MAC/Host side of the PHY is wired to a suitable MAC with the supported interface eg:- MAC supporting qsgmii
+interface can be connected to a PHY. A PHY may support for different interface, so the right electical interface needs to be 
+configured for the PHY for proper communication with the MAC and Link parter
+
+When the electrical interface is set properly, Auto/manual negotiation configuration(clause-28,clause-37) is needed for the PHY
+to establish the Link with the LinkPartner/MAC. Based on the capabilities of LinkPartner/MAC , PHY will negotiate and Link, speed
+and duplex mode is determined.At this point PHY is ready to communicate with it's peer.
+
+Steps involved in the port-config aplication are:
+
+	1. link:#mepa_demo/mepa_apps/phy_port_config.c@l46[Creating the Dev]
+	2. link:#mepa_demo/mepa_apps/phy_port_config.c@l142[Attaching the Dev]
+	3. link:#mepa_demo/mepa_apps/phy_port_config.c@l176[Configuring the Dev]
+	4. link:#mepa_demo/mepa_apps/phy_port_config.c@l126[Deleting the Dev]
+
+
+port-config application will enable the user to user MEPA, it gives the basic idea of configuring the PHY . With 
+port-config application the above mentioned configurations are passed and here are the step by step guide for using the 
+application.
+
+
+
+== Creating the Dev.
+
+ mepa-cmd dev create <port_no>
+
+This command will identify the phy which is connected in the port number and create a MEPA DEV 
+instance for the PHY.
+
+The MEPA instances needs to be created by the application. A MEPA instance is
+created by calling `mepa_create()`, which on success returns a `mepa_device_t`
+pointer. The `mepa_device_t` represents a single PHY, and must be used with all
+other MEPA APIs operating on a given PHY.
+
+
+Dev is a software instance of a port in the PHY, if the PHY is Quad channel PHY there will be 
+4 instances. The necessary params needed for creating this Dev is 
+
+	1. `mepa_callout`
+	2. `mepa_callout_ctx`
+	3. `mepa_board_conf_t`
+
+=== callout & callout_ctx
+
+In order for MEPA to be able to configure/query a given PHY, it needs to access
+the registers in side the PHY. To access PHY registers, some kind of
+bus-controller is needed (example MIIM), and if it is a shared bus, some
+addresses are needed. To keep MEPA board and OS agnostic, a set of call-back
+functions facilitating register access must be provided when creating a MEPA
+instance (see `struct mepa_callout`). A given board may have multiple buses,
+multiple PHYs, which lead to board specific needs for addressing a given PHYs.
+To avoid board dependencies in MEPA, all the callback functions therefore have a
+`struct mepa_callout_cxt`, defined and provided by the application itself, and
+only used by the application when the callback functions are used. Both the
+`mepa_callout_t` and `mepa_callout_ctx` object pointers are considered shared
+pointers, meaning that the memory pointing to must remain valid during the
+entire life time of the `mepa_device_t` instance. Multiple `mepa_device_t` may
+
+refer `mepa_drv_create` link:#mepa_demo/mepa_apps/phy_port_config.c@l51[Callout assignment, MEPA creation &configuration]  
+ 
+=== mepa_board_conf_t
+
+In board_config we pass port_no in board_conf.numeric_handle
+
+NOTE: if the PHY is vsc PHY the board_conf.vtss_instance_use, board_conf.vtss_instance_ptr 
+and board_conf.vtss_instance_create is important, if the vtss_instance_create = 1 , 
+MEPA will create a new vtss_instance and give it back in vtss_instance_ptr, if you want to use 
+the same vtss_instance_ptr for all the  VSC PHY ports set vtss_instance_use = 1;
+if vtss_instance_create = 0, MEPA will attach the all the phy's in the default vtss_instance.
+
+
+== Attaching the Dev
+
+	mepa-cmd dev attach <port_no> [qsgmii|sfi|sgmii]
+
+This command will attach the phy to the mac with the correct interface. 
+eg: The port_no in EDSX correspond to a serdes port for 25G slot1 the application port number is 
+13,14,15 and 16 (25G, 10G, 5G SGMII, 2.5G SGMII, 1G SGMII, USXGMII)
+
+
+== Configuring the dev
+
+	mepa-cmd dev conf <port_no> -f <file_name>
+
+The configuration is passed to the respective port from the file_name, the file consists of 
+mepa_conf_t structure in the json format. the json string should start with the json object
+"port_config"
+
+ 
+== Deleting the Dev
+
+	mepa-cmd dev del <port_no>
+
+The Dev instance can be deleted with the above command, when the dev deletion is done 
+The dev will be freed and the application deletes the PHY from the respective port no.
+
+
+
+
+
+ 
+

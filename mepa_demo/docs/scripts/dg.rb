@@ -95,6 +95,9 @@ end
 def build_cross_index_single src_file
     return nil if src_file.nil?
 
+    return nil if src_file == "mepa_demo/mepa_apps/phy_port_config.c"
+    return nil if src_file =="mepa_demo/mepa_apps/phy_macsec_demo.c"
+    return nil if src_file ==  "mepa_demo/mepa_apps/phy_kat_demo.c"
     #puts src_file
     #project_base = File.expand_path "#{Dir.getwd}/.."
     #puts project_base
