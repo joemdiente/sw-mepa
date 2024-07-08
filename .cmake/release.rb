@@ -176,10 +176,9 @@ def compile(ws, odir, preset, c)
         dw_file = "mscc-brsdk-#{arch}-#{c[:brsdk]}"
         dw_file += "-#{c[:brsdk_branch]}" if c[:brsdk_branch] and c[:brsdk_branch] != "brsdk"
         if c[:brsdk_branch]
-            #bcmd += "sudo /usr/local/bin/mscc-install-pkg -t brsdk/#{c[:brsdk]}-#{c[:brsdk_branch]} #{dw_file}; "
-            bcmd += "sudo /usr/local/bin/mscc-install-pkg -t brsdk/#{c[:brsdk]} #{dw_file}; "
+            bcmd += "sudo .cmake/docker/mchp-install-pkg -t brsdk/#{c[:brsdk]}-#{c[:brsdk_branch]} #{dw_file}; "
         else
-            bcmd += "sudo /usr/local/bin/mscc-install-pkg -t brsdk/#{c[:brsdk]} #{dw_file}; "
+            bcmd += "sudo .cmake/docker/mchp-install-pkg -t brsdk/#{c[:brsdk]} #{dw_file}; "
         end
         bcmd += "sudo /usr/local/bin/mscc-install-pkg -t toolchains/#{c[:tc_folder]} mscc-toolchain-bin-#{c[:tc]};"
     else

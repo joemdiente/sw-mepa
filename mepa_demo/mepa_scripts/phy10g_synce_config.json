@@ -5,6 +5,6 @@ vtss_phy_10g_sckout_conf_set => {
     'mode':'VTSS_PHY_10G_LINE0_RECVRD_CLOCK',
     'src':'VTSS_CKOUT_NO_SQUELCH',
     'freq':'VTSS_PHY_10G_SCKOUT_125_00',
-    'squelch_inv':1,
+    'squelch_inv':0,
     'enable':1
 }
