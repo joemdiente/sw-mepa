@@ -313,7 +313,7 @@ def record_symbols symbols
         next if not consume
 
         #puts "-----------------------------------"
-        #pp block_sequence
+        #puts block_sequence
         #puts "-----------------------------------"
 
         is_typedef = block_has(block_sequence, :sym_word, "typedef")
@@ -322,7 +322,7 @@ def record_symbols symbols
         has_semi  = block_has(block_sequence, :sym_single_char, ";")
         has_args  = block_has(block_sequence, :sym_single_char, "(")
 
-
+        has_fn_call = block_has_anyof(block_sequence, :sym_word, ["mepa_drv_del", "cli_cmd_dev_attach", "mepa_drv_create", "phy_assign_callout", "cli_cmd_phy_conf"])
         if is_sue and not has_args
             #puts "SUE: #{x[:line]} #{x[:match_txt]}"
             name = nil
@@ -351,7 +351,10 @@ def record_symbols symbols
             #puts "sue: #{is_sue[:match_txt]}"
             #puts "is_typedef: #{is_typedef}"
             #puts "typedef_name: #{typedef_name}"
-
+            if has_fn_call
+                 puts "has_fn_call #{block_sequence[:match_txt]}"
+                 symbol_obj_push block_sequence[:match_txt], :impl, { :type => "function", :file => block_sequence[:file], :line => block_sequence[:line] }
+            end
             if name and typedef_name
                 #puts "#{__LINE__} #{name[:line]} Declaration of #{is_sue[:match_txt]} #{name[:match_txt]} typedefed to #{typedef_name[:match_txt]}"
                 symbol_obj_push name[:match_txt], :decl, { :type => is_sue[:match_txt], :file => name[:file], :line => name[:line] }
@@ -526,14 +529,16 @@ def print_html obj, symbols
             # When browsing the code, we should jump directly the definition,
             # unless we are at the definition already, in that case we should go
             # to the sym-index page
-            s = ""
+            s = "<a href=\"##{x[:file]}@l#{x[:line]}\">#{ss}</a>"
+            puts "s is #{s}"
 
             if declared_here sym_idx, x
                 s = "<a href=\"#sym:#{x[:match_txt]}\">#{ss}</a>"
             else
                 # We only go directly is there is only 1 uniq match
                 if declared_once sym_idx
-                    s = "<a href=\"#symd:#{x[:match_txt]}\">#{ss}</a>"
+                    #s = "<a href=\"#symd:#{x[:match_txt]}\">#{ss}</a>"
+                    s = "<a href=\"##{x[:file]}@l#{x[:line]}\">#{ss}</a>"
                 else
                     s = "<a href=\"#sym:#{x[:match_txt]}\">#{ss}</a>"
                 end

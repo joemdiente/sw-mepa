@@ -95,9 +95,6 @@ end
 def build_cross_index_single src_file
     return nil if src_file.nil?
 
-    return nil if src_file == "mepa_demo/mepa_apps/phy_port_config.c"
-    return nil if src_file =="mepa_demo/mepa_apps/phy_macsec_demo.c"
-    return nil if src_file ==  "mepa_demo/mepa_apps/phy_kat_demo.c"
     #puts src_file
     #project_base = File.expand_path "#{Dir.getwd}/.."
     #puts project_base
@@ -309,14 +306,19 @@ def process_adoc dir, base, ext, content
         when /^(mepa_\w+)$/, /^(mepa_\w+)\([^\)]*\)$/, /^(MEPA_\w+)$/,
              /^(debug_\w+)$/, /^(debug_\w+)\([^\)]*\)$/,
              /^(miim_\w+)$/, /^(miim_\w+)\([^\)]*\)$/,
-             /^(mmd_\w+)$/, /^(mmd_\w+)\([^\)]*\)$/,
+             /^(mmd_\w+)$/, /^(mmd_\w+)\([^\)]*\)$/, /^(cli_\w+)$/, 
              /^(port_miim_\w+)$/, /^(port_miim_\w+)\([^\)]*\)$/
             sym = $symbol_index[$1]
             sym_name = $1
-
+            #puts "sym name is #{sym_name}"
             if sym
-                symbol_obj_push($1, :articles, { :type => "not sure", :file => "#{dir}/#{base}", :line => 0 })
-                snip = "<code><a href=\"#symd:#{sym_name}\">#{e.inner_text}</a></code>"
+                if sym_name.match("mepa_drv_") || sym_name.match("cli_cmd_")
+                  fn_hash = sym[:impl].keys[0]
+                  snip = "<code><a href=\"##{sym[:impl][fn_hash][0][:file]}@l#{sym[:impl][fn_hash][0][:line]}\">#{e.inner_text}</a></code>"
+                else
+                    symbol_obj_push($1, :articles, { :type => "not sure", :file => "#{dir}/#{base}", :line => 0 })
+                    snip = "<code><a href=\"#symd:#{sym_name}\">#{e.inner_text}</a></code>"
+                end
                 e.replace(snip)
             else
                 $log.error "Failed to find symbol #{sym_name}"

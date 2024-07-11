@@ -24,6 +24,7 @@ pages:
     - name: "MEPA App Reference"
       pages:
         - src: "mepa_demo/mepa_apps/phy_port_config.c"
+        - src: "mepa_demo/mepa_scripts/port_config_json.json"
     - name: "MEPA .h referenc"
       pages:
         - src:  "sw-mesa/me/include/microchip/ethernet/common.h"
