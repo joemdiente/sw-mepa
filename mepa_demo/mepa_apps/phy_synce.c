@@ -11,11 +11,6 @@
 #include "vtss_phy_10g_api.h"
 #include "vtss_private.h"
 
-#undef T_E
-#undef T_I
-#undef T_D
-#undef T_N
-
 #include "main.h"
 #include "trace.h"
 #include "cli.h"

@@ -6,6 +6,7 @@
 #include <mepa_ts_driver.h>
 #include <vtss_phy_api.h>
 #include "vtss_private.h"
+#include "common/vtss_phy_common.h"
 
 #include <string.h>
 
