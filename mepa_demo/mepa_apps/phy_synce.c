@@ -16,12 +16,8 @@
 #include "cli.h"
 #include "port.h"
 #include "mepa_driver.h"
+#include "phy_demo_apps.h"
 
-#define INDY_PHYID 0x8814
-#define M10G_PHYID1 0x8256
-#define M10G_PHYID2 0x8257
-#define M10G_PHYID3 0x8258
-#define VIPER_PHYID 8584
 meba_inst_t meba_phy_instances;
 
 static int cli_parm_clk_src (cli_req_t *req);
@@ -85,27 +81,27 @@ static cli_cmd_t cli_cmd_table[] = {
 static cli_parm_t cli_parm_table[] = {
     {
         "disableclk|serdes|coppermedia|clk1|clk2",
-        "DISABLECLK: Disable clock source\n"
-        "SERDES: Serdes clock source\n"
-        "COPPERMEDIA: Coppermedia clock source\n"
-        "CLK1: clock source1\n"
-        "CLK2: clock source2\n",
-        CLI_PARM_FLAG_NO_TXT | CLI_PARM_FLAG_SET,
+        "\n\t DISABLECLK	: Disable clock source\n"
+        "\t SERDES		: Serdes clock source\n"
+        "\t COPPERMEDIA	: Coppermedia clock source\n"
+        "\t CLK1		: Clock source1\n"
+        "\t CLK2		: Clock source2\n",
+        CLI_PARM_FLAG_NONE,
         cli_parm_clk_src
     },
     {
         "25mhz|31.25mhz|125mhz|156.25mhz",
-        "25MHZ: 25mhz expected clock frequency\n"
-        "31.25MHZ: 31.25mhz expected clock frequency\n"
-        "125MHZ: 125mhz expected clock frequency\n"
-        "156.25MHZ: 156.25mhz expected clock frequency\n",
+        "\n\t 25MHZ		: 25mhz expected clock frequency\n"
+        "\t 31.25MHZ	: 31.25mhz expected clock frequency\n"
+        "\t 125MHZ		: 125mhz expected clock frequency\n"
+        "\t 156.25MHZ	: 156.25mhz expected clock frequency\n",
         CLI_PARM_FLAG_NONE,
         cli_parm_freq
     },
     {
         "clkouta|clkoutb",
-        "clkoutA: Recovered clock output A\n"
-        "clkoutB: Recovered clock output B\n",
+        "\n\t CLKOUTA	: Recovered clock output A\n"
+        "\t CLKOUTB	: Recovered clock output B\n",
         CLI_PARM_FLAG_SET,
         cli_parm_clk_out
     },
@@ -118,6 +114,8 @@ static void cli_cmd_synce_conf_set(cli_req_t *req)
     vtss_phy_10g_sckout_conf_t phy10g_synce_conf;
     struct mepa_device *dev = meba_phy_instances->phy_devices[req->port_no];
     phy_data_t *data = (phy_data_t *)dev->data;
+    demo_phy_info_t phy_family;
+    mepa_rc rc;
 
     if(!meba_phy_instances->phy_devices[req->port_no])
     {
@@ -131,7 +129,12 @@ static void cli_cmd_synce_conf_set(cli_req_t *req)
         return;
     }
     meba_phy_info_get(meba_phy_instances, req->port_no, &phy_info);
-    if((phy_info.part_number == INDY_PHYID) || (phy_info.part_number == VIPER_PHYID))
+    if ((rc = phy_family_detect(meba_phy_instances, req->port_no, &phy_family)) != MEPA_RC_OK)
+    {
+        T_E("\n Error in Detecting PHY Family on Port %d\n", req->port_no);
+        return;
+    }
+    if((phy_family.family == PHY_FAMILY_INDY) || (phy_family.family == PHY_FAMILY_VIPER))
     {
         /* INDY PHY or VIPER PHY*/
         if(mreq->src > SYNCE_CLOCK_SRC_CLOCK_IN_2)
@@ -139,7 +142,7 @@ static void cli_cmd_synce_conf_set(cli_req_t *req)
             T_E("\n Provide valid clock source for the PHY \n");
             return;
         }
-        if(mreq->freq > LAN8814_FREQ_125M)
+        if((mreq->freq > LAN8814_FREQ_125M) && (mreq->freq < LAN8814_FREQ_25M))
         {
             T_E("\n Provide valid clock frequency for the PHY \n");
             return;
@@ -157,7 +160,7 @@ static void cli_cmd_synce_conf_set(cli_req_t *req)
             T_E("\nINDY: Error setting Synce configuration \n");
             return;
         }
-    } else if((phy_info.part_number == M10G_PHYID1) || (phy_info.part_number == M10G_PHYID2) || (phy_info.part_number == M10G_PHYID3)) {
+    } else if(phy_family.family == PHY_FAMILY_MALIBU_10G) {
         /* MALIBU10G PHY*/
         switch(mreq->src)
         {
@@ -185,7 +188,7 @@ static void cli_cmd_synce_conf_set(cli_req_t *req)
         {
             mreq->freq = PHY_10G_SCKOUT_125_00;
         }
-        if(mreq->freq > PHY_10G_SCKOUT_125_00)
+        if((mreq->freq > PHY_10G_SCKOUT_125_00) && (mreq->freq < PHY_10G_SCKOUT_156_25))
         {
             T_E("\n Provide valid clock frequency for the PHY \n");
             return;

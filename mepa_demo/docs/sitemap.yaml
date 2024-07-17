@@ -20,6 +20,7 @@ pages:
         - src: "mepa_demo/docs/port-config.adoc"
         - src: "mepa_demo/docs/kat-demo.adoc"
         - src: "mepa_demo/docs/macsec-demo.adoc"
+        - src: "mepa_demo/docs/synce-demo.adoc"
 
     - name: "MEPA App Reference"
       pages:

@@ -45,3 +45,4 @@ Following are the List of MEPA Sample Applications Available
 * link:#mepa_demo/docs/port-config[Port Confgiration Application]
 * link:#mepa_demo/docs/kat-demo[Known Answer Test(KAT) MACsec Application]
 * link:#mepa_demo/docs/macsec-demo[MACsec Demo Application]
+* link:#mepa_demo/docs/synce-demo[SyncE Demo Application]
