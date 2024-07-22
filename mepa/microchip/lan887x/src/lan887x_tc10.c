@@ -24,6 +24,8 @@ static mepa_rc lan887x_phy_tc10_set_sleep_support(struct mepa_device        *dev
         reg_data &= (~(LAN887X_DEV30_COMMON_TC10_MISC32_SLEEP_EN)) & 0xFFFFU;
     }
 
+    reg_data |= LAN887X_DEV30_COMMON_TC10_MISC32_VBAT_COM_WR;
+
     MEPA_RC_GOTO(rc, phy_mmd_reg_wr(dev, MDIO_MMD_VEND1, LAN887X_DEV30_COMMON_TC10_MISC32, reg_data));
 
     data->tc10_cfg.sleep_enable = enable;
@@ -191,7 +193,10 @@ static mepa_rc lan887x_phy_tc10_set_wake_pin_polarity(struct mepa_device        
     }
     }
 
-    MEPA_RC_GOTO(rc, phy_mmd_reg_wr(dev, MDIO_MMD_VEND1, LAN887X_DEV30_COMMON_TC10_MISC32, reg_data));
+    if (rc == MEPA_RC_OK) {
+        reg_data |= LAN887X_DEV30_COMMON_TC10_MISC32_VBAT_COM_WR;
+        MEPA_RC_GOTO(rc, phy_mmd_reg_wr(dev, MDIO_MMD_VEND1, LAN887X_DEV30_COMMON_TC10_MISC32, reg_data));
+    }
 
     if (pin == MEPA_TC10_WAKE_IN) {
         data->tc10_cfg.wake_in_pol = polarity;
@@ -265,7 +270,10 @@ static mepa_rc lan887x_phy_tc10_set_pin_mode(struct mepa_device          *dev,
     }
     }
 
-    MEPA_RC_GOTO(rc, phy_mmd_reg_wr(dev, MDIO_MMD_VEND1, LAN887X_DEV30_COMMON_TC10_MISC32, reg_data));
+    if (rc == MEPA_RC_OK) {
+        reg_data |= LAN887X_DEV30_COMMON_TC10_MISC32_VBAT_COM_WR;
+        MEPA_RC_GOTO(rc, phy_mmd_reg_wr(dev, MDIO_MMD_VEND1, LAN887X_DEV30_COMMON_TC10_MISC32, reg_data));
+    }
 
     if (pin == MEPA_TC10_INH) {
         data->tc10_cfg.inh_mode = mode;
@@ -388,8 +396,30 @@ error:
 
 mepa_rc lan887x_phy_tc10_set_config(struct mepa_device *dev, lan887x_tc10_data_t *cfg)
 {
+    uint16_t reg_val = LAN887X_DEV30_COMMON_TC10_MISC33_WK_DEB_VAL;
     mepa_rc rc = MEPA_RC_OK;
 
+    MEPA_RC_GOTO(rc, phy_mmd_reg_modify(dev, MDIO_MMD_VEND1, LAN887X_MISC_REGS_REG16,
+                                        LAN887X_MISC_REGS_REG16_IGNORE_IDLE_WITH_WUR_LPS,
+                                        LAN887X_MISC_REGS_REG16_IGNORE_IDLE_WITH_WUR_LPS));
+    MEPA_RC_GOTO(rc, phy_mmd_reg_modify(dev, MDIO_MMD_VEND1, LAN887X_DEV30_COMMON_TC10_REG_REG15,
+                                        LAN887X_DEV30_COMMON_TC10_REG_REG15_WK_OUT_PIN_REQ,
+                                        LAN887X_DEV30_COMMON_TC10_REG_REG15_WK_OUT_PIN_REQ));
+    MEPA_RC_GOTO(rc, phy_mmd_reg_wr(dev, MDIO_MMD_VEND1, LAN887X_DEV30_COMMON_TC10_MISC33,
+                                    (reg_val << 8) |
+                                    LAN887X_DEV30_COMMON_TC10_MISC33_WK_OUT_LEN));
+    MEPA_RC_GOTO(rc, phy_mmd_reg_modify(dev, MDIO_MMD_VEND1, LAN887X_DEV30_COMMON_TC10_MISC46,
+                                        LAN887X_DEV30_COMMON_TC10_MISC46_WK_PORT_TEST_MASK,
+                                        LAN887X_DEV30_COMMON_TC10_MISC46_WK_PORT_TEST_VAL));
+    MEPA_RC_GOTO(rc, phy_mmd_reg_modify(dev, MDIO_MMD_VEND1, LAN887X_MISC_REGS_MISC37,
+                                        LAN887X_MISC_REGS_MISC37_EN_TC10_SLEEP_SILENT,
+                                        LAN887X_MISC_REGS_MISC37_EN_TC10_SLEEP_SILENT));
+    MEPA_RC_GOTO(rc, phy_mmd_reg_modify(dev, MDIO_MMD_VEND1, LAN887X_DEV30_COMMON_TC10_MISC32,
+                                        LAN887X_DEV30_COMMON_TC10_MISC32_VAL,
+                                        LAN887X_DEV30_COMMON_TC10_MISC32_VAL));
+    MEPA_RC_GOTO(rc, phy_mmd_reg_modify(dev, MDIO_MMD_VEND1, LAN887X_DEV30_COMMON_TC10_MISC36,
+                                        LAN887X_DEV30_COMMON_TC10_MISC36_VAL,
+                                        LAN887X_DEV30_COMMON_TC10_MISC36_VAL));
     MEPA_RC_GOTO(rc, lan887x_phy_tc10_set_sleep_support(dev, cfg->sleep_enable));
     MEPA_RC_GOTO(rc, lan887x_phy_tc10_set_wakeup_support(dev, cfg->wakeup_mode));
     MEPA_RC_GOTO(rc, lan887x_phy_tc10_set_wakeup_fwd_support(dev, cfg->wakeup_fwd_mode));

@@ -110,6 +110,7 @@ static mepa_rc lan887x_phy_cable_diag_start(mepa_device_t *dev, mepa_bool_t is_h
 static mepa_rc lan887x_aneg_read_status(mepa_device_t *dev, mepa_status_t *status);
 static mepa_rc lan887x_int_reset(mepa_device_t *dev, const lan887x_reset_typ typ);
 static mepa_rc lan887x_phy_init(mepa_device_t *const dev);
+static mepa_rc lan887x_gpio_mode_set_private(mepa_device_t *dev, const mepa_gpio_conf_t *gpio_conf);
 /**********************************
  * Internal APIs
  *********************************/
@@ -219,7 +220,7 @@ static mepa_rc lan887x_config_led(mepa_device_t *const dev, const mepa_gpio_conf
 {
     mepa_rc rc = MEPA_RC_OK;
     phy_data_t *data = (phy_data_t *) dev->data;
-    uint16_t reg_offset = LAN887X_CHIPTOP_COMM_LED3_LED2;
+    uint16_t reg_offset = 0;
     uint16_t reg_val = LAN887X_CHIPTOP_LED_LINK_ACT_ANY_SPEED;
 
     switch (conf->mode) {
@@ -272,43 +273,23 @@ static mepa_rc lan887x_config_led(mepa_device_t *const dev, const mepa_gpio_conf
         rc = MEPA_RC_ERR_KR_CONF_NOT_SUPPORTED;
         break;
     }
+    if (conf->led_num == MEPA_LED0 || conf->led_num == MEPA_LED1) {
+        reg_offset = LAN887X_CHIPTOP_COMM_LED1_LED0;
+    } else if (conf->led_num == MEPA_LED2 || conf->led_num == MEPA_LED3) {
+        reg_offset = LAN887X_CHIPTOP_COMM_LED3_LED2;
+    } else {
+        rc = MEPA_RC_ERR_KR_CONF_NOT_SUPPORTED;
+    }
 
     if (rc == MEPA_RC_OK) {
         //updata metadata
-        (void) memcpy(&data->led3_conf, conf, sizeof(mepa_gpio_conf_t));
+        (void) memcpy(&data->led_conf[conf->led_num], conf, sizeof(mepa_gpio_conf_t));
+        if (conf->led_num == MEPA_LED1 || conf->led_num == MEPA_LED3) {
+            reg_val <<= 8;
+        }
         rc = phy_mmd_reg_wr(dev, MDIO_MMD_VEND1, reg_offset, reg_val);
     }
 
-    return rc;
-}
-
-static mepa_rc lan887x_tc10_init(mepa_device_t *const dev)
-{
-    uint16_t reg_val = LAN887X_DEV30_COMMON_TC10_MISC33_WK_DEB_VAL;
-    mepa_rc rc = MEPA_RC_OK;
-
-    MEPA_RC_GOTO(rc, phy_mmd_reg_modify(dev, MDIO_MMD_VEND1, LAN887X_MISC_REGS_REG16,
-                                        LAN887X_MISC_REGS_REG16_IGNORE_IDLE_WITH_WUR_LPS,
-                                        LAN887X_MISC_REGS_REG16_IGNORE_IDLE_WITH_WUR_LPS));
-    MEPA_RC_GOTO(rc, phy_mmd_reg_modify(dev, MDIO_MMD_VEND1, LAN887X_DEV30_COMMON_TC10_REG_REG15,
-                                        LAN887X_DEV30_COMMON_TC10_REG_REG15_WK_OUT_PIN_REQ,
-                                        LAN887X_DEV30_COMMON_TC10_REG_REG15_WK_OUT_PIN_REQ));
-    MEPA_RC_GOTO(rc, phy_mmd_reg_wr(dev, MDIO_MMD_VEND1, LAN887X_DEV30_COMMON_TC10_MISC33,
-                                    (reg_val << 8) |
-                                    LAN887X_DEV30_COMMON_TC10_MISC33_WK_OUT_LEN));
-    MEPA_RC_GOTO(rc, phy_mmd_reg_modify(dev, MDIO_MMD_VEND1, LAN887X_DEV30_COMMON_TC10_MISC32,
-                                        LAN887X_DEV30_COMMON_TC10_MISC32_VAL,
-                                        LAN887X_DEV30_COMMON_TC10_MISC32_VAL));
-    MEPA_RC_GOTO(rc, phy_mmd_reg_modify(dev, MDIO_MMD_VEND1, LAN887X_DEV30_COMMON_TC10_MISC46,
-                                        LAN887X_DEV30_COMMON_TC10_MISC46_WK_PORT_TEST_MASK,
-                                        LAN887X_DEV30_COMMON_TC10_MISC46_WK_PORT_TEST_VAL));
-    MEPA_RC_GOTO(rc, phy_mmd_reg_modify(dev, MDIO_MMD_VEND1, LAN887X_DEV30_COMMON_TC10_MISC36,
-                                        LAN887X_DEV30_COMMON_TC10_MISC36_VAL,
-                                        LAN887X_DEV30_COMMON_TC10_MISC36_VAL));
-    MEPA_RC_GOTO(rc, phy_mmd_reg_modify(dev, MDIO_MMD_VEND1, LAN887X_MISC_REGS_MISC37,
-                                        LAN887X_MISC_REGS_MISC37_EN_TC10_SLEEP_SILENT,
-                                        LAN887X_MISC_REGS_MISC37_EN_TC10_SLEEP_SILENT));
-error:
     return rc;
 }
 
@@ -552,7 +533,7 @@ static mepa_rc lan887x_phy_setup(mepa_device_t *const dev)
     phy_cfg_regs(dev, lan887x_onetime_setup, ARRAY_SIZE(lan887x_onetime_setup), PHY_FALSE);
 
     // Initialize TC10 required config
-    MEPA_RC_GOTO(rc, lan887x_tc10_init(dev));
+    MEPA_RC_GOTO(rc, lan887x_phy_tc10_set_config(dev, &data->tc10_cfg));
 
     MEPA_RC_GOTO(rc, lan887x_phy_init(dev));
 
@@ -591,7 +572,7 @@ static mepa_rc lan887x_phy_init(mepa_device_t *const dev)
     MEPA_RC_GOTO(rc, lan887x_config_mac(dev));
 
     //LED setup
-    MEPA_RC_GOTO(rc, lan887x_config_led(dev, &data->led3_conf));
+    MEPA_RC_GOTO(rc, lan887x_config_led(dev, &data->led_conf[MEPA_LED2]));
 
     //clear config
     MEPA_RC_GOTO(rc, lan887x_phy_cfg_clr(dev));
@@ -1190,11 +1171,6 @@ static mepa_rc lan887x_int_reset(mepa_device_t *dev, const lan887x_reset_typ typ
 
     MEPA_RC_GOTO(rc, phy_get_device_info(dev));
 
-#if 0 //FIXME: we may not need this phy reset will not affect registers
-    // tc10 config
-    MEPA_RC_GOTO(rc, lan887x_phy_tc10_set_config(dev, &data->tc10_cfg));
-#endif
-
 error:
     return rc;
 }
@@ -1606,8 +1582,8 @@ static void lan887x_fill_probe_data(mepa_driver_t *drv,
     data->media_intf = MESA_PHY_MEDIA_IF_T1_1000FX;
     data->mac_if = MESA_PORT_INTERFACE_RGMII_RXID;
 
-    data->led3_conf.led_num = MEPA_LED3;
-    data->led3_conf.mode = MEPA_GPIO_MODE_LED_LINK_ACTIVITY;
+    data->led_conf[MEPA_LED2].led_num = MEPA_LED2;
+    data->led_conf[MEPA_LED2].mode = MEPA_GPIO_MODE_LED_LINK_ACTIVITY;
     data->tc10_cfg.sleep_enable = PHY_TRUE;
     data->tc10_cfg.wakeup_mode = MEPA_TC10_WAKEUP_WUP_WAKEIN_ENABLE;
     data->tc10_cfg.wakeup_fwd_mode = MEPA_TC10_WAKEUP_FWD_WUP_WAKEOUT_ENABLE;
@@ -2026,22 +2002,95 @@ static mepa_rc lan887x_event_status_poll(struct mepa_device *dev, mepa_event_t *
     return rc;
 }
 
+//In Molineux, LED0 is equivalent to LED1
+//             LED1 to LED2
+//             LED2 to LED3
+//             LED3 to LED4 of hardware
+static mepa_rc lan887x_gpio_mode_set_private(mepa_device_t *dev, const mepa_gpio_conf_t *gpio_conf)
+{
+    mepa_rc rc = MEPA_RC_ERROR;
+    uint16_t dir, val = 0, gpio_no = gpio_conf->gpio_no;
+    mepa_bool_t clk_en = PHY_FALSE, gpio_en = PHY_FALSE;
+    mepa_gpio_mode_t mode = gpio_conf->mode;
+
+    if ((mode == MEPA_GPIO_MODE_IN || mode == MEPA_GPIO_MODE_OUT)) {
+        gpio_en = PHY_TRUE;
+        dir = mode == MEPA_GPIO_MODE_OUT ? 1U : 0U;
+    } else if (mode >= MEPA_GPIO_MODE_LED_LINK_ACTIVITY && mode <= MEPA_GPIO_MODE_LED_DISABLE_EXTENDED) {
+        MEPA_RC_GOTO(rc, lan887x_config_led(dev, gpio_conf));
+    } else if (mode == MEPA_GPIO_MODE_PTP_REF_CLK || mode == MEPA_GPIO_MODE_PTP_REF_ADJ) {
+        clk_en = PHY_TRUE;
+        gpio_no = mode == MEPA_GPIO_MODE_PTP_REF_CLK ? 1U : 2U;
+    } else {
+        /* Event misra_c_2012_rule_15_7_violation:  No non-empty terminating "else" statement. */
+    }
+    if (gpio_no < 3U) {
+        if (gpio_en) {
+            val = ((uint16_t)1U << (4U + gpio_no));
+            dir = dir << gpio_no;
+            MEPA_RC_GOTO(rc, phy_mmd_reg_modify(dev, MDIO_MMD_VEND1, LAN887X_MX_CHIP_TOP_REG_GPIO_DIR, dir, dir));
+        } else if (clk_en) {
+            val = ((uint16_t)1U << (8U + gpio_no));
+        } else {
+            /*  Event misra_c_2012_rule_15_7_violation: No non-empty terminating "else" statement. */
+        }
+        MEPA_RC_GOTO(rc, phy_mmd_reg_modify(dev, MDIO_MMD_VEND1, LAN887X_MX_CHIP_TOP_REG_CONTROL1,
+                                            (gpio_en || clk_en) ? val : 0U, val));
+    } else {
+        rc = MEPA_RC_NOT_IMPLEMENTED;
+    }
+
+error:
+    return rc;
+}
+
 // Set gpio mode to input, output or alternate function
 static mepa_rc lan887x_gpio_mode_set(mepa_device_t *dev, const mepa_gpio_conf_t *gpio_conf)
 {
     mepa_rc rc = MEPA_RC_ERROR;
 
-    if (dev != NULL) {
-        rc = MEPA_RC_NOT_IMPLEMENTED;
+    if (dev != NULL && gpio_conf != NULL) {
+        MEPA_ENTER(dev);
+        rc = lan887x_gpio_mode_set_private(dev, gpio_conf);
+        MEPA_EXIT(dev);
+    }
 
-        // Note: For now only LED3 is supported
-        if (gpio_conf != NULL &&
-            (gpio_conf->led_num == MEPA_LED3) &&
-            (gpio_conf->mode >= MEPA_GPIO_MODE_LED_LINK_ACTIVITY && gpio_conf->mode <= MEPA_GPIO_MODE_LED_DISABLE_EXTENDED)) {
-            MEPA_ENTER(dev);
-            rc = lan887x_config_led(dev, gpio_conf);
-            MEPA_EXIT(dev);
+    return rc;
+}
+
+static mepa_rc lan887x_gpio_out_set(mepa_device_t *dev, uint8_t gpio_no, mepa_bool_t value)
+{
+    uint16_t val = 0;
+    mepa_rc rc = MEPA_RC_ERROR;
+
+    if (dev != NULL) {
+        MEPA_ENTER(dev);
+        if (gpio_no < 3U) {
+            val = ((uint16_t)1U << (4U + gpio_no));
+            rc = phy_mmd_reg_modify(dev, MDIO_MMD_VEND1, LAN887X_MX_CHIP_TOP_REG_GPIO_DATA, value ? val : 0U, val);
+        } else {
+            T_W(MEPA_TRACE_GRP_GEN, "Not valid gpio on LAN887x phy");
         }
+        MEPA_EXIT(dev);
+    }
+
+    return rc;
+}
+
+static mepa_rc lan887x_gpio_in_get(mepa_device_t *dev, uint8_t gpio_no, mepa_bool_t *const value)
+{
+    uint16_t val = 0;
+    mepa_rc rc = MEPA_RC_ERROR;
+
+    if (dev != NULL) {
+        MEPA_ENTER(dev);
+        if (gpio_no < 3U) {
+            rc = phy_mmd_reg_rd(dev, MDIO_MMD_VEND1, LAN887X_MX_CHIP_TOP_REG_GPIO_DATA, &val);
+            *value = (((val >> (4U + gpio_no)) & 1U) > 0U) ? PHY_TRUE : PHY_FALSE;
+        } else {
+            T_W(MEPA_TRACE_GRP_GEN, "Not valid gpio on LAN887x phy");
+        }
+        MEPA_EXIT(dev);
     }
 
     return rc;
@@ -2255,6 +2304,8 @@ mepa_drivers_t mepa_lan887x_driver_init(void)
         lan887x_drv->mepa_driver_event_enable_get   = lan887x_event_enable_get;
         lan887x_drv->mepa_driver_event_poll         = lan887x_event_status_poll;
         lan887x_drv->mepa_driver_gpio_mode_set      = lan887x_gpio_mode_set;
+        lan887x_drv->mepa_driver_gpio_out_set       = lan887x_gpio_out_set;
+        lan887x_drv->mepa_driver_gpio_in_get        = lan887x_gpio_in_get;
         lan887x_drv->mepa_driver_loopback_set       = lan887x_loopback_set;
         lan887x_drv->mepa_driver_loopback_get       = lan887x_loopback_get;
         lan887x_drv->mepa_driver_phy_info_get       = lan887x_info_get;
