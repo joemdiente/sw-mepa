@@ -20,6 +20,11 @@ static mscc_appl_trace_module_t trace_module = {
 };
 
 #define MALIBU_SPECIFIC_CHECK (0x8250)
+#ifdef EDS2_SUPPORT_EN
+#define COMA_MODE_GPIO_NUM 64
+#else
+#define COMA_MODE_GPIO_NUM 33
+#endif
 
 enum {
     TRACE_GROUP_DEFAULT,
@@ -249,6 +254,19 @@ static void cli_cmd_dev_del(cli_req_t *req)
 
 }
 
+static void cli_cmd_coma_mode(cli_req_t *req)
+{
+
+    (void)mesa_gpio_direction_set(NULL, 0, COMA_MODE_GPIO_NUM, TRUE);
+    if (mesa_gpio_write(NULL, 0, COMA_MODE_GPIO_NUM, req->enable) != MESA_RC_OK) {
+        req->rc = -1;
+        T_E("Error in coma mode enable/disable\n");
+    }
+    else
+        req->rc = 0;
+
+}
+
 static cli_cmd_t cli_cmd_table[] = {
     {
         "Dev Create [<port_no>]",
@@ -272,6 +290,12 @@ static cli_cmd_t cli_cmd_table[] = {
         "del dev for the particular port number",
         cli_cmd_dev_attach
     },
+    {
+        "coma_mode [enable|disable]",
+        "Enable/Disable coma mode for the PHY",
+        cli_cmd_coma_mode
+    },
+
 };
 
 static int cli_parm_keyword(cli_req_t *req)

@@ -40,6 +40,9 @@ or MAC. The negotiation process is contingent upon the capabilities of the link 
 determine the link status, speed, and duplex mode. Upon successful negotiation, the PHY is prepared to 
 communicate with its counterpart.
 
+PHY can be held in COMA MODE by setting active high on GPIO pins (EDSX-GPIO33, EDS2-GPIO63(slot1),64(slot2)) and can be released
+by asserting pin low.
+
 Steps involved in the port-config aplication are:
 
 	1. Creating the Dev `mepa_drv_create` 
@@ -129,3 +132,17 @@ The Dev instance can be deleted with the above command, when the dev deletion is
 The dev will be freed and the application deletes the PHY from the respective port no.\
 
 For sample json-file refer to :link:#mepa_demo/mepa_scripts/port_config_json[JSON config]
+
+== Enabling COMA mode
+
+	mepa-cmd coma_mode enable
+
+This command will set the direction of GPIO pin as output and enable COMA mode on the 
+PHY by asserting GPIO Pin (GPIO-33 (EDSX), GPIO-64(EDS2)) high.
+
+== Disabling COMA mode
+
+	mepa-cmd coma_mode disable
+
+This command will set the direction of GPIO pin as output and disable COMA mode on the 
+PHY by asserting GPIO Pin (GPIO-33 (EDSX), GPIO-64(EDS2)) low.

@@ -321,8 +321,8 @@ $presets.each do |preset, c|
 
     if c[:brsdk]
         if c[:brsdk_branch]
-            #run "sudo /usr/local/bin/mscc-install-pkg -t brsdk/#{c[:brsdk]}-#{c[:brsdk_branch]} #{dw_file};"
-            run "sudo /usr/local/bin/mscc-install-pkg -t brsdk/#{c[:brsdk]} #{dw_file};"
+            run "sudo /usr/local/bin/mscc-install-pkg -t brsdk/#{c[:brsdk]}-#{c[:brsdk_branch]} #{dw_file};"
+            #run "sudo /usr/local/bin/mscc-install-pkg -t brsdk/#{c[:brsdk]} #{dw_file};"
         else
             run "sudo /usr/local/bin/mscc-install-pkg -t brsdk/#{c[:brsdk]} #{dw_file};"
         end

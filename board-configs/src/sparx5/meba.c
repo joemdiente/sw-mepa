@@ -16,7 +16,7 @@
 #define STATUSLED_R_GPIO 13
 #define AQR_RESET 19
 #define PHY_ID_GPY241 0xDC00
-#define INDY_COMA_GPIO 16
+#define COMA_GPIO 33
 #define VTSS_TS_IO_ARRAY_SIZE 4
 
 /* LED colors */
@@ -1519,8 +1519,8 @@ static mesa_rc fa_reset(meba_inst_t inst, meba_reset_point_t reset)
                 }
             } else if (board->gpy241_present) {
                 // Release COMA mode (activate Indy phys)
-                mesa_gpio_direction_set(NULL, 0, INDY_COMA_GPIO, true);
-                mesa_gpio_write(NULL, 0, INDY_COMA_GPIO, false);
+                mesa_gpio_direction_set(NULL, 0, COMA_GPIO, true);
+                mesa_gpio_write(NULL, 0, COMA_GPIO, false);
             }
             if (board->malibu_present || board->malibu_present2) {
                 /* Initlize the 10G Malibu Phy */
