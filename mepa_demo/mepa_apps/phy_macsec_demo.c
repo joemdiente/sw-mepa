@@ -11,7 +11,7 @@
 #include "cli.h"
 #include "port.h"
 #include <mepa_apps/phy_macsec_demo.h>
-
+#include "phy_demo_apps.h"
 
 
 /**
@@ -305,7 +305,7 @@ static void cli_cmd_secy_create(cli_req_t *req)
     macsec_configuration *mreq = req->module_req;
     mepa_rc rc = MEPA_RC_ERROR;
     int protect = 0, frame_val = 0, cipher_sel = 0, sectag_len = 0, es_bit = 0, scb_bit = 0;
-
+    char input[3];
     if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
         printf(" Dev is Not Created for the port : %d\n", req->port_no);
         return;
@@ -314,7 +314,9 @@ static void cli_cmd_secy_create(cli_req_t *req)
 
     cli_printf("\n SECTAG PARAMETERS CONFIGURATION ........................ \n");
     cli_printf("\n\n Protect Frames [1 : true, 0 : false] : ");
-    scanf("%d", &protect);
+    scanf("%s", &input[0]);
+    protect = atoi_Conversion(input);
+    memset(input, '\0', sizeof(input));
     if(protect == 0 || protect == 1) {
         secy_conf.protect_frames = protect;
     } else {
@@ -322,7 +324,9 @@ static void cli_cmd_secy_create(cli_req_t *req)
         return;
     }
     cli_printf("\n Select Frame Validation [0 : Disable, 1 : Strict , 2 : Check] : ");
-    scanf("%d", &frame_val);
+    scanf("%s", &input[0]);
+    frame_val = atoi_Conversion(input);
+    memset(input, '\0', sizeof(input));
     switch(frame_val) {
     case 0:
         secy_conf.validate_frames = MEPA_MACSEC_VALIDATE_FRAMES_DISABLED;
@@ -338,7 +342,9 @@ static void cli_cmd_secy_create(cli_req_t *req)
         return;
     }
     cli_printf("\n Select Cipher Suit [0 : GCM-AES-128,  1 : GCM-AES-256,  2 : GCM-AES-XPN-128,  3 : GCM-AES-XPN-256] : ");
-    scanf("%d", &cipher_sel);
+    scanf("%s", &input[0]);
+    cipher_sel = atoi_Conversion(input);
+    memset(input, '\0', sizeof(input));
     switch(cipher_sel) {
     case 0:
         secy_conf.current_cipher_suite = MEPA_MACSEC_CIPHER_SUITE_GCM_AES_128;
@@ -357,7 +363,9 @@ static void cli_cmd_secy_create(cli_req_t *req)
         return;
     }
     cli_printf("\n Sectag length [0 : 16-byte Sectag,  1 : 8-Byte Sectag] : ");
-    scanf("%d", &sectag_len);
+    scanf("%s", &input[0]);
+    sectag_len = atoi_Conversion(input);
+    memset(input, '\0', sizeof(input));    
     if(sectag_len == 0 || sectag_len == 1) {
         secy_conf.always_include_sci = !(sectag_len);
     } else {
@@ -365,7 +373,9 @@ static void cli_cmd_secy_create(cli_req_t *req)
         return;
     }
     cli_printf("\n End Station(ES) Bit in Sectag (0 or 1) : ");
-    scanf("%d", &es_bit);
+    scanf("%s", &input[0]);
+    es_bit = atoi_Conversion(input);
+    memset(input, '\0', sizeof(input));
     if(es_bit == 0 || es_bit == 1) {
         secy_conf.use_es = es_bit;
     } else {
@@ -373,7 +383,9 @@ static void cli_cmd_secy_create(cli_req_t *req)
         return;
     }
     cli_printf("\n Single Copy Broadcast (SCB) in Sectag (0 or 1) : ");
-    scanf("%d", &scb_bit);
+    scanf("%s", &input[0]);
+    scb_bit = atoi_Conversion(input);
+    memset(input, '\0', sizeof(input));
     if(scb_bit == 0 || scb_bit == 1) {
        secy_conf.use_scb = scb_bit;
     } else {
@@ -453,6 +465,7 @@ static void cli_cmd_match_conf(cli_req_t *req)
     macsec_configuration *mreq = req->module_req;
     mepa_rc rc;
     int match = 0;
+    char input[3];
     if(!req->set) {
         T_E("\n Invalid Syntax\n");
         cli_printf("\n Syntax : pattern_conf <port_no> port-id <port_id> [egress|ingress] [cont_port|uncont_port|drop]\n");
@@ -484,7 +497,8 @@ static void cli_cmd_match_conf(cli_req_t *req)
     cli_printf("\n 8 = Outer VLAN ID Match");
     cli_printf("\n 9 = Inner VLAN ID Match");
     cli_printf("\n\n Parameter that needs to be Matched : ");
-    scanf("%d", &match);
+    scanf("%s", &input[0]);
+    match = atoi_Conversion(input);
     cli_printf("\n\n");
     switch(match) {
     case 0:
@@ -1813,6 +1827,7 @@ static void cli_cmd_cltr_frame_set(cli_req_t *req)
 {
     mepa_rc rc;
     int match = 0;
+    char input[3];
     macsec_configuration *mreq = req->module_req;
     if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
         printf(" Dev is Not Created for the port : %d\n", req->port_no);
@@ -1824,7 +1839,8 @@ static void cli_cmd_cltr_frame_set(cli_req_t *req)
     cli_printf("\n 2 = Ethertype Patter Matching");
     cli_printf("\n 3 = DMAC and Ethertype Match");
     cli_printf("\n\n Parameter that needs to be Matched : ");
-    scanf("%d", &match);
+    scanf("%s", &input[0]);
+    match = atoi_Conversion(input);
     cli_printf("\n");
     switch(match) {
     case 1:

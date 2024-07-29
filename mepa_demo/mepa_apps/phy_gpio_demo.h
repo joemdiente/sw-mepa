@@ -9,6 +9,12 @@
 #define MAX_SUPPORTED_ALT_FUN_VIPER 14
 #define MAX_SUPPORTED_ALT_FUN_INDY  16
 
+#define MALIBU10G_EVENT           2
+#define MALIBU10G_EXTENDED_EVENT  3
+#define MALIBU10G_EXTENDED2_EVENT 4
+#define MALIBU10G_MACSEC_EVENT    5
+#define MALIBU10G_PTP_EVENT       6
+
 typedef struct {
     uint8_t      gpio_number;
 } gpio_configuration;
@@ -55,3 +61,14 @@ gpio_table_t indy[MAX_SUPPORTED_ALT_FUN_INDY] = {//Alt mode    // gpio_no    // 
                                                      {14,              23,       "SOF 3"},
                                                      {15,              11,       "Port Led"},
                                                     };
+
+gpio_table_t malibu10g_ch_0[8] = {//Alt mode         //gpio_no      //Alt Function
+				   {0,                0,           "Rate Select"},
+                                   {1,                1,           "Module Absent"},
+                                   {2,                2,           "I2C Master Clock"},
+                                   {3,                3,           "I2C Master Data"},
+                                   {4,                4,           "Tx Disable"},
+                                   {5,                5,           "Tx Fault"},
+                                   {6,                6,           "Rx LOS"},
+                                   {7,                7,           "Link Up"},
+                               };

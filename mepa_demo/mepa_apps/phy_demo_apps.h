@@ -42,3 +42,5 @@ typedef struct {
 mepa_rc phy_family_detect(meba_inst_t meba_instance, mepa_port_no_t port_no, demo_phy_info_t *phy_info);
 
 mepa_rc mepa_dev_create_check(meba_inst_t meba_instance, mepa_port_no_t port_no);
+
+int atoi_Conversion(const char* strg);

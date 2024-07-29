@@ -12,6 +12,7 @@
 #include "port.h"
 #include "phy_demo_apps.h"
 #include "phy_gpio_demo.h"
+#include <vtss_phy_api.h>
 
 meba_inst_t meba_gpio_lp_instance;
 
@@ -216,11 +217,408 @@ static void cli_cmd_gpio_conf(cli_req_t *req)
             cli_printf(" Error in configuring GPIO : %d\n", req->port_no);
             return;
         }
-    } else {
-        T_E("\n PHY Not Supported  to be implemented..............\n");
+    } else if(phy_family.family == PHY_FAMILY_MALIBU_10G) {
+        uint16_t          gpio_no = 0;
+        vtss_gpio_10g_gpio_mode_t   gpio_mode;
+	memset(&gpio_mode, 0, sizeof(vtss_gpio_10g_gpio_mode_t));
+        int gpio_output_mode = 0, gpio_out_signal = 0, gpio_alt = 0, gpio_aggr = 0, p_gpio = 0, gpio_conf = 0;
+        uint8_t channel_id;
+	char input[3];
+        mepa_bool_t event_ena_dis = 0;
+	gpio_table_t gpio_map;
+	int event_type = 0, enable = 0;
+
+
+        vtss_phy_10g_event_t       ev;
+        vtss_phy_10g_extnd_event_t ext_ev;
+        u64                        ex2_ev;
+        vtss_phy_ts_event_t ts_ev;
+	mepa_macsec_event_t event;
+
+        cli_printf("\n");
+        cli_printf("\t 1 . Output Mode\n");
+        cli_printf("\t 2 . Input Mode\n");
+        cli_printf("\t 3 . Alternate Mode\n");
+        cli_printf("\n\t ==Enter the Mode of GPIO Pin : ");
+        scanf("%s", &input[0]);
+	gpio_conf = atoi_Conversion(input);
+	memset(input, '\0', sizeof(input));
+        if(gpio_conf == 1) {
+            cli_printf("\n\t ==Enter GPIO Number : ");
+            scanf("%s", &input[0]);
+	    gpio_no = atoi_Conversion(input);
+            memset(input, '\0', sizeof(input));
+            cli_printf("\n");
+            cli_printf("\t 1 . No Routing only as Output PIN\n");
+            cli_printf("\t 2 . Route signal to Output PIN\n");
+            cli_printf("\n\t ==Enter usage of GPIO Output Pin : ");
+            scanf("%s", &input[0]);
+	    gpio_output_mode = atoi_Conversion(input);
+            memset(input, '\0', sizeof(input));
+
+	    switch(gpio_output_mode) {
+            case 1:
+                gpio_mode.mode = VTSS_10G_PHY_GPIO_OUT;
+                gpio_mode.in_sig = VTSS_10G_GPIO_INTR_SGNL_NONE;
+                gpio_mode.invert_output = FALSE;
+                break;
+            case 2:
+                cli_printf("\n");
+                cli_printf("\t 1  . Host Link Status\n");
+                cli_printf("\t 2  . Line Link Status\n");
+                cli_printf("\t 3  . KR 8b10b\n"); 
+                cli_printf("\t 4  . KR 10b\n");
+                cli_printf("\t 5  . ROSI Pulse\n");
+                cli_printf("\t 6  . ROSI Sdata\n");
+                cli_printf("\t 7  . ROSI Sclk\n");
+                cli_printf("\t 8  . TOSI Pulse\n");
+                cli_printf("\t 9  . TOSI Sclk\n");
+                cli_printf("\t 10 . Line PCS 1G Link\n");
+                cli_printf("\n\t ==Enter Signal needs to be routed :");
+                scanf("%s", &input[0]);
+		gpio_out_signal = atoi_Conversion(input);
+		memset(input, '\0', sizeof(input));
+                cli_printf("\n\t ==Enter Virtual GPIO Number p_gpio [0 - 7] for each channel: ");
+                scanf("%s", &input[0]);
+		p_gpio = atoi_Conversion(input);
+                memset(input, '\0', sizeof(input));
+                if(p_gpio < 8) {
+                    gpio_mode.p_gpio = p_gpio;
+                } else {
+                    T_E("\n Invalid Virtual GPIO Number supported 0 to 7 \n");
+                    return;
+                }
+                gpio_mode.mode = VTSS_10G_PHY_GPIO_OUT;
+                switch(gpio_out_signal) {
+                case 1:
+                    gpio_mode.in_sig = VTSS_10G_GPIO_INTR_SGNL_HOST_LINK; 
+                    break;
+                case 2:
+                    gpio_mode.in_sig = VTSS_10G_GPIO_INTR_SGNL_LINE_LINK;
+                    break;
+                case 3:
+                    gpio_mode.in_sig = VTSS_10G_GPIO_INTR_SGNL_LINE_KR_8b10b_2GPIO;
+                    break;
+                case 4:
+                    gpio_mode.in_sig = VTSS_10G_GPIO_INTR_SGNL_LINE_KR_10b_2GPIO;
+                    break;
+                case 5:
+                    gpio_mode.in_sig = VTSS_10G_GPIO_INTR_SGNL_ROSI_PULSE;
+                    break;
+                case 6:
+                    gpio_mode.in_sig = VTSS_10G_GPIO_INTR_SGNL_ROSI_SDATA;
+                    break;
+                case 7:
+                    gpio_mode.in_sig = VTSS_10G_GPIO_INTR_SGNL_ROSI_SCLK;
+                    break;
+                case 8:
+                    gpio_mode.in_sig = VTSS_10G_GPIO_INTR_SGNL_TOSI_PULSE;
+                    break;
+                case 9:
+                    gpio_mode.in_sig = VTSS_10G_GPIO_INTR_SGNL_TOSI_SCLK;
+                    break;
+                case 10:
+                    gpio_mode.in_sig = VTSS_10G_GPIO_INTR_SGNL_LINE_PCS1G_LINK;
+                    break;
+                default:
+                    T_E("\n Invalid Input \n");
+                    break;
+                }
+                break;
+            default:
+                T_E("\n Invalid Input \n");
+                return;
+	    }
+        } else if(gpio_conf == 2) {
+            cli_printf("\n\t ==Enter GPIO Number : ");
+            scanf("%s", &input[0]);
+            gpio_no = atoi_Conversion(input);
+            memset(input, '\0', sizeof(input));
+            gpio_mode.mode  = VTSS_10G_PHY_GPIO_IN;
+            gpio_mode.input = VTSS_10G_GPIO_INPUT_NONE;
+            gpio_mode.p_gpio_intrpt = FALSE;
+            // GPIO Input Configuration
+        } else if(gpio_conf == 3) {
+            cli_printf("\n");
+            cli_printf("\t 1  . Rate Select\n");
+            cli_printf("\t 2  . Module Absent\n");
+            cli_printf("\t 3  . I2C Master Clock\n");
+            cli_printf("\t 4  . I2C Master Data\n");
+            cli_printf("\t 5  . Tx Disable\n");
+            cli_printf("\t 6  . Tx Fault\n");
+            cli_printf("\t 7  . Rx LOS\n");
+            cli_printf("\t 8  . Line Link Up\n");
+            cli_printf("\t 9  . LED Activity\n");
+            cli_printf("\t 10 . Aggregate Interrupt\n");
+            cli_printf("\n\t ==Enter The Alternate Mode to be Configured : ");
+	    scanf("%s", &input[0]);
+	    gpio_alt = atoi_Conversion(input);
+            memset(input, '\0', sizeof(input));
+            if(gpio_alt == 0 || gpio_alt > 10) {
+                T_E("\n Invalid Input\n");
+                return;
+            }
+	    gpio_map = malibu10g_ch_0[gpio_alt - 1];
+
+            vtss_phy_10g_channel_id_get(NULL, req->port_no, &channel_id);
+            gpio_no =  (channel_id * 8) + gpio_map.gpio_no;
+
+            switch(gpio_alt) {
+            case 1:
+                gpio_mode.mode = VTSS_10G_PHY_GPIO_OUT;
+                gpio_mode.in_sig = VTSS_10G_GPIO_INTR_SGNL_NONE;
+                gpio_mode.invert_output = FALSE;
+                break;
+            case 2:
+                gpio_mode.mode  = VTSS_10G_PHY_GPIO_IN;
+                gpio_mode.input = VTSS_10G_GPIO_INPUT_SFP_MOD_DET;
+                gpio_mode.use_as_intrpt = TRUE;
+                break;
+            case 3:
+                gpio_mode.mode  = VTSS_10G_PHY_GPIO_OUT;
+                gpio_mode.in_sig = VTSS_10G_GPIO_INTR_SGNL_I2C_MSTR_CLK_OUT;
+                cli_printf("\n\t ==Enter Virtual GPIO Number p_gpio [0 - 7] for each channel : ");
+                scanf("%s", &input[0]);
+		p_gpio = atoi_Conversion(input);
+                memset(input, '\0', sizeof(input));
+                if(p_gpio < 8) {
+                    gpio_mode.p_gpio = p_gpio;
+                } else {
+                    T_E("\n Invalid Virtual GPIO Number supported 0 to 7 \n");
+                    return;
+                }
+                gpio_mode.invert_output = 0;
+                break;
+            case 4:
+                gpio_mode.mode   = VTSS_10G_PHY_GPIO_OUT;
+                gpio_mode.in_sig = VTSS_10G_GPIO_INTR_SGNL_I2C_MSTR_DATA_OUT;
+                cli_printf("\n\t ==Enter Virtual GPIO Number p_gpio [0 - 7] for each channel : ");
+                scanf("%s", &input[0]);
+                p_gpio = atoi_Conversion(input);
+                memset(input, '\0', sizeof(input));
+                if(p_gpio < 8) {
+                    gpio_mode.p_gpio = p_gpio;
+                } else {
+                    T_E("\n Invalid Virtual GPIO Number supported 0 to 7 \n");
+                    return;
+                }
+                gpio_mode.invert_output = 0;
+                break;
+            case 5:
+                gpio_mode.mode = VTSS_10G_PHY_GPIO_OUT;
+                gpio_mode.in_sig = VTSS_10G_GPIO_INTR_SGNL_NONE;
+                break;
+            case 6:
+            case 7:
+                gpio_mode.mode = VTSS_10G_PHY_GPIO_IN;
+                gpio_mode.input = VTSS_10G_GPIO_INPUT_NONE;
+                gpio_mode.p_gpio_intrpt = 0;
+                break;
+            case 8:
+                gpio_mode.mode = VTSS_10G_PHY_GPIO_OUT;
+                gpio_mode.in_sig = VTSS_10G_GPIO_INTR_SGNL_LINE_LINK;
+                cli_printf("\n\t ==Enter Virtual GPIO Number p_gpio [0 - 7] for each channel : ");
+                scanf("%s", &input[0]);
+                p_gpio = atoi_Conversion(input);
+                memset(input, '\0', sizeof(input));
+                if(p_gpio < 8) {
+                    gpio_mode.p_gpio = p_gpio;
+                } else {
+                    T_E("\n Invalid Virtual GPIO Number supported 0 to 7 \n");
+                    return;
+                }
+                gpio_mode.invert_output = 0;
+                break;
+            case 9:
+                gpio_mode.mode = VTSS_10G_PHY_GPIO_LED;
+                gpio_mode.in_sig = VTSS_10G_GPIO_INTR_SGNL_LED_TX;
+                gpio_mode.led_conf.mode = VTSS_10G_GPIO_LED_TX_LINK_TX_RX_DATA;
+                gpio_mode.led_conf.blink = VTSS_10G_GPIO_LED_BLINK_NONE;
+                gpio_mode.invert_output = 0;
+		gpio_no = 36 + channel_id;
+                // LED Activity
+                break;
+            case 10:
+                // None
+                break;
+            default:
+                T_E("\n Invalid Input \n");
+                return;
+            }
+            if(gpio_alt == 10) {
+                cli_printf("\n");
+                cli_printf("\t 1  . WIS 0\n");
+                cli_printf("\t 2  . WIS 1\n");
+                cli_printf("\t 3  . Line PCS10G\n");
+                cli_printf("\t 4  . Host PCS10G\n");
+                cli_printf("\t 5  . Line PCS 1G\n");
+                cli_printf("\t 6  . Host PCS 1G\n");
+                cli_printf("\t 7  . MACsec Egress \n");
+                cli_printf("\t 8  . MACsec Ingress\n");
+                cli_printf("\t 9  . Line MAC\n");
+                cli_printf("\t 10 . HOST MAC\n");
+                cli_printf("\t 11 . FC Buffer\n");
+                cli_printf("\t 12 . Line Ingess FIFO Interrupt\n");
+                cli_printf("\t 13 . Line Egress FIFO Interrupt\n");
+                cli_printf("\t 14 . Host Egress FIFO Interrupt\n");
+                cli_printf("\t 15 . Line PMA Interrupt\n");
+                cli_printf("\t 16 . Host PMA Interrupt\n");
+                cli_printf("\t 17 . 1588 Interrupt\n");
+                cli_printf("\t 18 . LCPLL 0 Interrupt\n");
+                cli_printf("\t 19 . LCPLL 1 Interrupt\n");
+                cli_printf("\t 20 . Cross connect interrupt\n");
+                cli_printf("\n\t ==Enter The Interrupt to be routed to Aggr Intrpt : ");
+                scanf("%s", &input[0]);
+                gpio_aggr = atoi_Conversion(input);
+                memset(input, '\0', sizeof(input));
+                gpio_mode.mode = VTSS_10G_PHY_GPIO_AGG_INT_0;
+                gpio_mode.c_intrpt = gpio_aggr - 1;
+                gpio_no = 34;
+                switch(gpio_aggr) {
+                case 1:
+                case 2:
+                    gpio_mode.aggr_intrpt = 1 << (channel_id * 2);
+		    event_type = MALIBU10G_EVENT;
+                    ev = VTSS_PHY_10G_LINK_LOS_EV;
+                    break;
+                case 3:
+                    gpio_mode.aggr_intrpt = 1 << ((channel_id * 2) + 1);
+                    ext_ev = VTSS_PHY_10G_HIGHBER_EV | VTSS_PHY_10G_RX_LINK_STAT_EV;
+                    event_type = MALIBU10G_EXTENDED_EVENT;
+                    break;
+                case 4:
+                    gpio_mode.aggr_intrpt = 1 << ((channel_id * 2) + 1);
+                    ex2_ev = (1 << VTSS_PHY_HOST_10G_HIGHBER_EV) | (1 << VTSS_PHY_HOST_10G_RX_LINK_STAT_EV);
+                    event_type = MALIBU10G_EXTENDED2_EVENT;
+                    break;
+                case 5:
+                    gpio_mode.aggr_intrpt = 1 << ((channel_id * 2) + 1);
+                    ex2_ev = (1 << VTSS_PHY_LINE_1G_XGMII_MASK_LINK_DOWN_MASK) | (1 << VTSS_PHY_LINE_1G_XGMII_MASK_OUT_OF_SYNC_MASK);
+                    event_type = MALIBU10G_EXTENDED2_EVENT;
+                    break;
+                case 6:
+                    gpio_mode.aggr_intrpt = 1 << ((channel_id * 2) + 1);
+                    ex2_ev = (1 << VTSS_PHY_HOST_1G_XGMII_MASK_LINK_DOWN_MASK) | (1 << VTSS_PHY_HOST_1G_XGMII_MASK_OUT_OF_SYNC_MASK);
+                    event_type = MALIBU10G_EXTENDED2_EVENT;
+                    break;
+                case 7:
+                case 8:
+                    gpio_mode.aggr_intrpt = 1 << ((channel_id * 2) + 1);
+                    event = MEPA_MACSEC_SEQ_ROLLOVER_EVENT;
+		    event_type = MALIBU10G_MACSEC_EVENT;
+                    break;
+                case 9:
+                    gpio_mode.aggr_intrpt = 1 << ((channel_id * 2) + 1);
+                    event_type = MALIBU10G_EXTENDED_EVENT;
+                    ext_ev = VTSS_PHY_10G_LINE_MAC_LOCAL_FAULT_EV | VTSS_PHY_10G_LINE_MAC_REMOTE_FAULT_EV;
+                    break;
+                case 10:
+                    gpio_mode.aggr_intrpt = 1<< ((channel_id * 2) + 1);
+                    event_type = MALIBU10G_EXTENDED_EVENT;
+                    ext_ev = VTSS_PHY_10G_HOST_MAC_LOCAL_FAULT_EV | VTSS_PHY_10G_HOST_MAC_REMOTE_FAULT_EV;
+                    break;
+                case 11:
+                    gpio_mode.aggr_intrpt = 1 << ((channel_id * 2) + 1);
+                    event_type = MALIBU10G_EXTENDED2_EVENT;
+                    ex2_ev = (1 << VTSS_MAC_FC_BUFFER_STATUS_MASK_RX_UNDERFLOW_DROP_STICKY_MASK) | (1 << VTSS_MAC_FC_BUFFER_STATUS_MASK_RX_OVERFLOW_DROP_STICKY_MASK) |
+                             (1 << VTSS_MAC_FC_BUFFER_STATUS_MASK_TX_DATA_QUEUE_UNDERFLOW_DROP_STICKY_MASK) | 
+                             (1 << VTSS_MAC_FC_BUFFER_STATUS_MASK_TX_DATA_QUEUE_OVERFLOW_DROP_STICKY_MASK)  |
+                             (1 << VTSS_MAC_FC_BUFFER_STATUS_MASK_TX_UNCORRECTED_FRM_DROP_STICKY_MASK)      | 
+                             (1 << VTSS_MAC_FC_BUFFER_STATUS_MASK_RX_UNCORRECTED_FRM_DROP_STICKY_MASK);
+                    break;
+                case 12:
+                    gpio_mode.aggr_intrpt = 1 << ((channel_id * 2) + 1);
+                    event_type = MALIBU10G_EXTENDED_EVENT;
+                    ext_ev = VTSS_PHY_10G_RX_FIFO_UNDERFLOW_EV | VTSS_PHY_10G_RX_FIFO_OVERFLOW_EV;
+                    break;
+                case 13:
+                    gpio_mode.aggr_intrpt = 1 << ((channel_id * 2) + 1);
+                    event_type = MALIBU10G_EXTENDED_EVENT;
+                    ext_ev = VTSS_PHY_10G_TX_FIFO_UNDERFLOW_EV | VTSS_PHY_10G_TX_FIFO_OVERFLOW_EV;
+                    break;
+                case 14:
+                    gpio_mode.aggr_intrpt = 1 << ((channel_id * 2) + 1);
+                    event_type = MALIBU10G_EXTENDED_EVENT;
+                    ext_ev = VTSS_PHY_10G_TX_FIFO2_UNDERFLOW_EV | VTSS_PHY_10G_TX_FIFO2_OVERFLOW_EV;
+                    break;
+                case 15:
+                   gpio_mode.aggr_intrpt = 1 << ((channel_id * 2) + 1);
+                   event_type = MALIBU10G_EXTENDED2_EVENT;
+                   ex2_ev = (1 << VTSS_PHY_LINE_10G_RX_LOS_EV) | (1 << VTSS_PHY_LINE_10G_RX_LOL_EV) | (1 << VTSS_PHY_LINE_10G_TX_LOL_EV);
+                   break;
+                case 16:
+                   gpio_mode.aggr_intrpt = 1 << ((channel_id * 2) + 1);
+                   event_type = MALIBU10G_EXTENDED_EVENT;
+                   ext_ev = VTSS_PHY_10G_RX_LOS_EV | VTSS_PHY_10G_RX_LOL_EV | VTSS_PHY_10G_TX_LOL_EV;
+                   break;
+                case 17:
+                   gpio_mode.aggr_intrpt =  1 << (channel_id + 8);
+		   gpio_mode.mode = VTSS_10G_PHY_GPIO_1588_INT;
+		   event_type = MALIBU10G_PTP_EVENT;
+                   ts_ev = VTSS_PHY_TS_EGR_TIMESTAMP_CAPTURED | VTSS_PHY_TS_EGR_ENGINE_ERR | VTSS_PHY_TS_EGR_FIFO_OVERFLOW | VTSS_PHY_TS_INGR_ENGINE_ERR |
+                           VTSS_PHY_TS_INGR_RW_FCS_ERR | VTSS_PHY_TS_EGR_RW_FCS_ERR;
+                   break;
+                case 18:
+                   gpio_mode.mode = VTSS_10G_PHY_GPIO_PLL_INT_0;
+                   break;
+                case 19:
+                   gpio_mode.mode = VTSS_10G_PHY_GPIO_PLL_INT_1;
+                   break;
+                case 20:
+                   gpio_mode.mode = VTSS_10G_PHY_GPIO_CRSS_INT;
+                   break;
+                default:
+                   T_E("\n Invalid Input \n");
+                   return;
+                }
+                cli_printf("\n\t Event Enable or Disable [1 or 0] : ");
+                scanf("%d", &enable);
+                event_ena_dis = (enable == 1) ? 1 : 0;
+            }
+
+
+        } else {
+            T_E("\n Invalid Input \n");
+            return;
+        }
+
+        if (vtss_phy_10g_gpio_mode_set(NULL, req->port_no, gpio_no, &gpio_mode) != VTSS_RC_OK) {
+            T_E("\n Error in Configuring GPIO on port : %d\n", req->port_no);
+            return;
+        }
+
+        
+        if(event_type == MALIBU10G_EVENT) {
+            if (vtss_phy_10g_event_enable_set(NULL, req->port_no, ev, event_ena_dis) != VTSS_RC_OK) {
+                T_E("\n vtss_phy_10g_event_enable_set, port %d, gpio %d\n", req->port_no, gpio_no);
+                return;
+            }
+        } else if(event_type == MALIBU10G_EXTENDED_EVENT) {
+            if (vtss_phy_10g_extended_event_enable_set(NULL, req->port_no, ext_ev, event_ena_dis) != VTSS_RC_OK) {
+                T_E("\n vtss_phy_10g_extended_event_enable_set, port %d, gpio %d\n", req->port_no, gpio_no);
+                return;
+            }
+        } else if(event_type == MALIBU10G_EXTENDED2_EVENT) {
+            if (vtss_phy_10g_extended2_event_enable_set(NULL, req->port_no, ex2_ev, event_ena_dis) != VTSS_RC_OK) {
+                T_E("\n vtss_phy_10g_extended2_event_enable_set, port %d, gpio %d\n", req->port_no, gpio_no);
+                return;
+            }
+        } else if(event_type == MALIBU10G_MACSEC_EVENT) {
+            if ((rc = mepa_macsec_event_enable_set(meba_gpio_lp_instance->phy_devices[req->port_no], req->port_no, event, event_ena_dis)) != MEPA_RC_OK) {
+                T_E("\n Error in Configuring MACsec Event on Port : %d \n", req->port_no);
+                return;
+            }
+        } else if(event_type == MALIBU10G_PTP_EVENT) {
+            if (vtss_phy_ts_event_enable_set(NULL, req->port_no, event_ena_dis, ts_ev) != VTSS_RC_OK) {
+                T_E("\n vtss_phy_ts_event_enable_set, port %d, gpio %d\n", req->port_no, gpio_no);
+                return;
+            }
+        }
+        cli_printf("\n GPIO Pin %d configured in %s Mode......\n", gpio_no, gpio_txt[gpio_conf - 1]);
     }
     return;
 }
+
 
 static void cli_cmd_gpio_out_set(cli_req_t *req)
 {

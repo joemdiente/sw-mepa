@@ -3177,6 +3177,10 @@ vtss_rc vtss_phy_10g_extended2_event_enable_set(const vtss_inst_t               
                                                 const BOOL                         extnd2_enable);
 
 
+vtss_rc vtss_phy_10g_channel_id_get (const vtss_inst_t inst,
+                                     const vtss_port_no_t port_no,
+                                     uint8_t *const channel_id);
+
 #ifdef __cplusplus
 }
 #endif

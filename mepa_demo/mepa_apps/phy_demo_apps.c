@@ -58,3 +58,18 @@ mepa_rc mepa_dev_create_check(meba_inst_t meba_instance, mepa_port_no_t port_no)
     }
     return MEPA_RC_OK;
 }
+
+int atoi_Conversion(const char* strg)
+{
+
+    // Initialize res to 0
+    int res = 0;
+    int i = 0;
+
+    // Iterate through the string strg and compute res
+    while (strg[i] != '\0') {
+        res = res * 10 + (strg[i] - '0');
+        i++;
+    }
+    return res;
+}

@@ -5011,6 +5011,20 @@ vtss_rc vtss_phy_10g_auto_failover_get(const vtss_inst_t      inst,
     return rc;
 }
 
+vtss_rc vtss_phy_10g_channel_id_get (const vtss_inst_t inst,
+                                     const vtss_port_no_t port_no,
+                                     uint8_t *const channel_id)
+{
+    vtss_state_t *vtss_state;
+    vtss_rc      rc;
+
+    VTSS_ENTER();
+    if ((rc = vtss_inst_phy_10G_no_check_private(inst, &vtss_state, port_no)) == VTSS_RC_OK) {
+        *channel_id = vtss_state->phy_10g_state[port_no].channel_id;
+    }
+    VTSS_EXIT();
+    return rc;
+}
 
 /* ================================================================= *
  *  Public functions - End
