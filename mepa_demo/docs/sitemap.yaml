@@ -21,12 +21,13 @@ pages:
         - src: "mepa_demo/docs/kat-demo.adoc"
         - src: "mepa_demo/docs/macsec-demo.adoc"
         - src: "mepa_demo/docs/synce-demo.adoc"
+        - src: "mepa_demo/docs/gpio-demo.adoc"
 
     - name: "MEPA App Reference"
       pages:
         - src: "mepa_demo/mepa_apps/phy_port_config.c"
         - src: "mepa_demo/mepa_scripts/port_config_json.json"
-    - name: "MEPA .h referenc"
+    - name: "MEPA .h reference"
       pages:
         - src:  "sw-mesa/me/include/microchip/ethernet/common.h"
         - src:  "mepa/include/microchip/ethernet/phy/api/types.h"
