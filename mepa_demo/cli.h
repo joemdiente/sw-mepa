@@ -37,6 +37,8 @@ typedef struct {
     // MEBA instance
     meba_inst_t inst;
     uint32_t rc;
+    uint8_t file;
+    char file_name[100];
     // Module specific parser data
     uint8_t module_data[10240];
     void    *module_req;

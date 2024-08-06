@@ -306,6 +306,7 @@ static int cli_parm_keyword(cli_req_t *req)
         /* Take the file input from the cli */
         if(mreq->file && !strcmp(req->stx,"[filename]")) {
             strcpy(mreq->filename,req->cmd);
+            strcpy(req->file_name,req->cmd);
             return 0;
         }
         return 1;
@@ -320,8 +321,10 @@ static int cli_parm_keyword(cli_req_t *req)
     if (!strncasecmp(found, "sfi", 3))
         mreq->interface = MESA_PORT_INTERFACE_SFI;
 
-    if (!strncasecmp(found, "-f", 2))
+    if (!strncasecmp(found, "-f", 2)) {
+	req->file = 1;
         mreq->file = 1;
+    }
 
     return 0;
 

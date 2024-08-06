@@ -995,6 +995,7 @@ static void init_modules(mscc_appl_init_t *init)
     mscc_appl_phy_synce(init);
     mepa_demo_appl_macsec_demo(init);
     mepa_demo_appl_gpio_lp_demo(init);
+    mscc_appl_phy_loopback_init(init);
 }
 
 typedef struct {

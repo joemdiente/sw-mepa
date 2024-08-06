@@ -67,6 +67,7 @@ void mscc_appl_spi_init(mscc_appl_init_t *init);
 void mscc_appl_intr_init(mscc_appl_init_t *init);
 void mepa_demo_appl_macsec_demo(mscc_appl_init_t *init);
 void mepa_demo_appl_gpio_lp_demo(mscc_appl_init_t *init);
+void mscc_appl_phy_loopback_init(mscc_appl_init_t *init);
 typedef enum {
     SPI_USER_REG,  // Switch register access
     SPI_USER_FPGA, // FPGA register access

@@ -22,15 +22,19 @@ pages:
         - src: "mepa_demo/docs/macsec-demo.adoc"
         - src: "mepa_demo/docs/synce-demo.adoc"
         - src: "mepa_demo/docs/gpio-demo.adoc"
+        - src: "mepa_demo/docs/loopback-demo.adoc"
 
     - name: "MEPA App Reference"
       pages:
         - src: "mepa_demo/mepa_apps/phy_port_config.c"
+        - src: "mepa_demo/mepa_apps/phy_loopback.c"
         - src: "mepa_demo/mepa_scripts/port_config_json.json"
+        - src: "mepa_demo/mepa_scripts/loopback_config.json"
     - name: "MEPA .h reference"
       pages:
         - src:  "sw-mesa/me/include/microchip/ethernet/common.h"
         - src:  "mepa/include/microchip/ethernet/phy/api/types.h"
         - src:  "mepa/include/microchip/ethernet/phy/api/phy.h"
         - src:  "mepa/include/microchip/ethernet/phy/api.h"
+        - src:  "mepa/vtss/include/vtss_phy_10g_api.h"
 ---
