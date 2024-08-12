@@ -190,7 +190,7 @@ static void cli_cmd_macsec_ena(cli_req_t *req)
         }
         /* Default action configuration for non-matching frames */
         mepa_macsec_default_action_policy_t default_action_policy = {
-            .ingress_non_control_and_non_macsec = MEPA_MACSEC_DEFAULT_ACTION_DROP,
+            .ingress_non_control_and_non_macsec = MEPA_MACSEC_DEFAULT_ACTION_BYPASS,
             .ingress_control_and_non_macsec     = MEPA_MACSEC_DEFAULT_ACTION_BYPASS,
             .ingress_non_control_and_macsec     = MEPA_MACSEC_DEFAULT_ACTION_BYPASS,
             .ingress_control_and_macsec         = MEPA_MACSEC_DEFAULT_ACTION_BYPASS,
@@ -1044,7 +1044,7 @@ static void cli_macsec_statistics(const char *col1, const char *col2, uint64_t v
         cli_printf("%-30s %s %-15d\n", col1, ":", value1);
         return;
     }
-    cli_printf("%-30s %s %-15d %-30s %s %-15d\n", col1, ":", value1, col2, ":", value2);     
+    cli_printf("%-30s %s %-15ld %-30s %s %-15ld\n", col1, ":", value1, col2, ":", value2);     
 }                     
 
 static void cli_cmd_macsec_secy_statistics(cli_req_t *req)
@@ -1163,8 +1163,8 @@ static void cli_cmd_macsec_tx_sa_statistics(cli_req_t *req)
     cli_printf("\n\n");
     cli_printf("Transmit Secure Association Statistics \n");
     cli_printf("==================================================\n");
-    cli_printf("%-30s %s %-15d\n", "out_pkts_protected", ":", counters.out_pkts_protected);
-    cli_printf("%-30s %s %-15d\n", "out_pkts_encrypted", ":", counters.out_pkts_encrypted);
+    cli_printf("%-30s %s %-15ld\n", "out_pkts_protected", ":", counters.out_pkts_protected);
+    cli_printf("%-30s %s %-15ld\n", "out_pkts_encrypted", ":", counters.out_pkts_encrypted);
     return;
 }
 
@@ -1647,8 +1647,15 @@ static void cli_cmd_macsec_conf_get(cli_req_t *req)
     mepa_macsec_sak_t   sak;
     mepa_macsec_sci_t sci;
     mepa_macsec_rx_sc_conf_t  rx_sc_conf;
+    mepa_macsec_pkt_num_t next_pn_xpn;
+    memset(&secy_conf_get, 0, sizeof(mepa_macsec_secy_conf_t));
+    memset(&tx_sc_conf_get, 0, sizeof(mepa_macsec_tx_sc_conf_t));
+    memset(&sak, 0, sizeof(mepa_macsec_sak_t));
+    memset(&rx_sc_conf, 0, sizeof(mepa_macsec_rx_sc_conf_t));
     uint32_t next_pn = 0;
+    int xpn = 0;
     mepa_bool_t conf = 0;
+    mepa_macsec_ssci_t ssci;
     mepa_bool_t active;
     if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
         printf(" Dev is Not Created for the port : %d\n", req->port_no);
@@ -1719,13 +1726,34 @@ static void cli_cmd_macsec_conf_get(cli_req_t *req)
         cli_printf("%-25s : %d\n","confidentiality_offset", tx_sc_conf_get.confidentiality_offset);
         break;
     case MACSEC_TX_SA_CONF_GET:
-        if ((rc = mepa_macsec_tx_sa_get(meba_macsec_instance->phy_devices[req->port_no], macsec_port, mreq->an_no, &next_pn, &conf, &sak, &active)) != MEPA_RC_OK) {
+        /* Get Current Cipher Suit of the Secure Association */
+        if ((rc = mepa_macsec_secy_conf_get(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &secy_conf_get)) != MEPA_RC_OK) {
             T_E("\n Error in getting the SecY on port : %d \n", req->port_no);
             return;
         }
+        if(secy_conf_get.current_cipher_suite == MEPA_MACSEC_CIPHER_SUITE_GCM_AES_128 || secy_conf_get.current_cipher_suite == MEPA_MACSEC_CIPHER_SUITE_GCM_AES_256)
+        {
+            xpn = 0;
+            if ((rc = mepa_macsec_tx_sa_get(meba_macsec_instance->phy_devices[req->port_no], macsec_port, mreq->an_no, &next_pn, &conf,&sak,&active))!=MEPA_RC_OK) {
+                T_E("\n Error in getting TX Secure Association Conf on port : %d \n", req->port_no);
+                return;
+            }
+        } else {
+            xpn = 1;
+            if ((rc = mepa_macsec_tx_seca_get(meba_macsec_instance->phy_devices[req->port_no], macsec_port, mreq->an_no, &next_pn_xpn, &conf, &sak, &active,
+                                              &ssci))!= MEPA_RC_OK) 
+            {
+                T_E("\n Error in getting the Tx XPN Secure Association Get on port : %d \n", req->port_no);
+                return;
+            }
+        }
         cli_printf("Tx Secure Association Configuration for port no %d with port id %d \n", req->port_no, mreq->port_id);
         cli_printf("=============================================================================\n");
-        cli_printf("%-25s : %d\n","Next Pn", next_pn);
+        if(xpn) {
+            cli_printf("%-25s : %ld\n","Next Pn", next_pn_xpn.xpn);
+        } else {
+           cli_printf("%-25s : %ld\n","Next Pn", next_pn);
+        }
         cli_printf("%-25s : %s\n","confidentiality", conf ? "Enabled":"Disabled");
         cli_printf("%-25s : %s\n","Active", active ? "Yes" : "No");
         cli_printf("%-25s :", "Key");
@@ -1788,14 +1816,31 @@ static void cli_cmd_macsec_conf_get(cli_req_t *req)
 
         memcpy(&sci.mac_addr, &secy_conf_get.mac_addr, sizeof(mepa_mac_t));
         sci.port_id = mreq->rx_sc_id;
-        if ((rc = mepa_macsec_rx_sa_get(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &sci, mreq->an_no, &next_pn, &sak, &active)) != MEPA_RC_OK) {
-            T_E("\n Error in getting the SecY on port : %d \n", req->port_no);
-            return;
+
+        if(secy_conf_get.current_cipher_suite == MEPA_MACSEC_CIPHER_SUITE_GCM_AES_128 || secy_conf_get.current_cipher_suite == MEPA_MACSEC_CIPHER_SUITE_GCM_AES_256)
+        {
+            xpn = 0;
+            if ((rc = mepa_macsec_rx_sa_get(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &sci, mreq->an_no,&next_pn,&sak,&active)) != MEPA_RC_OK) {
+                T_E("\n Error in getting the Rx SA Conf on port : %d \n", req->port_no);
+                return;
+            }
+        } else {
+            xpn = 1;
+            if ((rc = mepa_macsec_rx_seca_get(meba_macsec_instance->phy_devices[req->port_no], macsec_port, &sci,mreq->an_no, &next_pn_xpn, &sak, &active,
+                                              &ssci)) != MEPA_RC_OK)
+            {
+                T_E("\n Error in getting the Rx SA Conf on port : %d \n", req->port_no);
+                return;
+            }
         }
         cli_printf("Rx Secure Channel Configuration for port no %d with port id %d and channel id %d and an = %d\n", req->port_no, mreq->port_id, mreq->rx_sc_id,
                    mreq->an_no);
         cli_printf("====================================================================================================================\n");
-        cli_printf("%-25s : %d\n","Lowest Pn", next_pn);
+        if(xpn) {
+            cli_printf("%-25s : %ld\n","Lowest Pn", next_pn_xpn.xpn);
+        } else {
+            cli_printf("%-25s : %ld\n","Lowest Pn", next_pn);
+        }
         cli_printf("%-25s : %s\n","Active", active ? "Yes" : "No");
         cli_printf("%-25s :", "Key");
         for(int i = 0; i < MAX_KEY_LEN; i++) {
