@@ -1191,6 +1191,19 @@ mepa_rc mepa_ts_test_config(struct mepa_device                    *dev,
     return dev->drv->mepa_ts->mepa_ts_test_config(dev, test_id, reg_dump);
 }
 
+mepa_rc mepa_ts_pch_mch_error_info_get(struct mepa_device *dev, mepa_pch_mch_mismatch_info_t *const info)
+{
+    if (!dev->drv->mepa_ts) {
+        return MESA_RC_NOT_IMPLEMENTED;
+    }
+
+    if (!dev->drv->mepa_ts->mepa_ts_pch_mch_error_info_get) {
+        return MESA_RC_NOT_IMPLEMENTED;
+    }
+
+    return dev->drv->mepa_ts->mepa_ts_pch_mch_error_info_get(dev, info);
+}
+
 mepa_rc mepa_debug_info_dump(struct mepa_device *dev,
                              const mepa_debug_print_t pr,
                              const mepa_debug_info_t   *const info)

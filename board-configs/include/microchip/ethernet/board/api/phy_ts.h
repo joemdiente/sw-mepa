@@ -78,6 +78,9 @@ mepa_rc meba_phy_ts_fifo_empty(meba_inst_t inst, mepa_port_no_t port_no);
 
 mepa_rc meba_phy_ts_fifo_get(meba_inst_t inst, mepa_port_no_t port_no, mepa_fifo_ts_entry_t ts_list[], const size_t size, uint32_t *const num);
 
+// Get PCH/MCH header error information
+mepa_rc meba_phy_ts_pch_mch_error_info_get(meba_inst_t inst, mepa_port_no_t port_no, mepa_pch_mch_mismatch_info_t *const info);
+
 // Sample Test configuration
 mepa_rc meba_ts_test_config(meba_inst_t inst, mepa_port_no_t port_no, uint16_t test_id, mepa_bool_t reg_dump);
 

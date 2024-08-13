@@ -167,7 +167,13 @@ static mepa_rc indy_tsu_block_init(mepa_device_t *dev, const mepa_ts_init_conf_t
     }
     clock_cfg = clock_cfg | INDY_PTP_REF_CLK_CFG_REF_CLK_PERIOD_OVERRIDE;
     EP_WRM(dev, INDY_PTP_REF_CLK_CFG, clock_cfg, INDY_DEF_MASK);
-    val = val | INDY_PTP_OPERATING_MODE_VAL_F(1); // 1 for PTP in normal operating mode
+    if (ts_init_conf->mch_pch_conf.mch_en) {
+        val = val | INDY_PTP_OPERATING_MODE_VAL_F(3); // 3 for PTP in MCH operating mode
+    } else if(ts_init_conf->mch_pch_conf.pch_en) {
+        val = val | INDY_PTP_OPERATING_MODE_VAL_F(2); // 2 for PTP in PCH operating mode
+    } else {
+        val = val | INDY_PTP_OPERATING_MODE_VAL_F(1); // 1 for PTP in normal operating mode
+    }
     EP_WRM(dev, INDY_PTP_OPERATING_MODE, val, INDY_PTP_OPERATING_MODE_VAL);
     // Enable command control.
     val = INDY_PTP_CMD_CTL_ENABLE | INDY_PTP_CMD_CTL_LTC_TEMP_RATE_SEL;
@@ -205,6 +211,7 @@ static mepa_rc indy_ts_port_init(mepa_device_t *dev, const mepa_ts_init_conf_t *
     data->ts_state.rx_ts_pos           = ts_init_conf->rx_ts_pos;
     data->ts_state.tx_auto_followup_ts = ts_init_conf->tx_auto_followup_ts;
     data->ts_state.tc_op_mode          = ts_init_conf->tc_op_mode;
+    data->ts_state.mch_pch             = ts_init_conf->mch_pch_conf;
 
     if (ts_init_conf->tc_op_mode == MEPA_TS_TC_OP_MODE_B) {
         T_E(MEPA_TRACE_GRP_TS, "tc mode B not supported on Lan-8814");
@@ -270,7 +277,13 @@ static mepa_rc indy_ts_port_init(mepa_device_t *dev, const mepa_ts_init_conf_t *
     data->ts_state.default_latencies.tx1000mbps =  val << 16;
 
 #endif
-
+    EP_RD(dev,INDY_PTP_TSU_GEN_CONF,&val);
+    if (ts_init_conf->mch_pch_conf.save_ts_with_crc_err) {
+        val |= INDY_PTP_TSU_GEN_CONF_TS_CRC_PKT;
+    } else {
+        val &= ~INDY_PTP_TSU_GEN_CONF_TS_CRC_PKT;
+    }
+    EP_WRM(dev,INDY_PTP_TSU_GEN_CONF, val,INDY_PTP_TSU_GEN_CONF_TS_CRC_PKT);
     data->ts_state.ts_init_done = TRUE;
     return MEPA_RC_OK;
 }
@@ -321,6 +334,7 @@ static mepa_rc indy_ts_init_conf_get(mepa_device_t *dev, mepa_ts_init_conf_t *co
     ts_init_conf->tc_op_mode        = data->ts_state.tc_op_mode;
     ts_init_conf->dly_req_recv_10byte_ts = FALSE;
     ts_init_conf->tx_auto_followup_ts = data->ts_state.tx_auto_followup_ts;
+    ts_init_conf->mch_pch_conf      = data->ts_state.mch_pch;
     MEPA_EXIT(dev);
 
     return MEPA_RC_OK;
@@ -2462,6 +2476,21 @@ mepa_rc indy_ts_test_config(mepa_device_t *dev, uint16_t test_id, mepa_bool_t re
     return MEPA_RC_OK;
 }
 
+mepa_rc indy_ts_pch_mch_error_get(struct mepa_device *dev,
+                                      mepa_pch_mch_mismatch_info_t *const info)
+{
+    mepa_rc rc = MEPA_RC_OK;
+    uint16_t val = 0;
+    MEPA_ENTER(dev);
+    EP_RD(dev, INDY_PTP_PCH_FORMAT_MISMATCH, &val);
+    info->subportid_mismatch = (val & INDY_PTP_PCH_FORMAT_MISMATCH_SUB_PORT_ID);
+    info->crc_error = (val & INDY_PTP_PCH_FORMAT_MISMATCH_CRC_ERR);
+    info->ext_type_mismatch = (val & INDY_PTP_PCH_FORMAT_MISMATCH_EXT_TYPE);
+    info->pkt_type_mismatch = (val & INDY_PTP_PCH_FORMAT_MISMATCH_PKT_TYPE);
+    MEPA_EXIT(dev);
+    return rc;
+}
+
 mepa_rc indy_ts_debug_info_dump(struct mepa_device *dev,
                                     const mepa_debug_print_t pr,
                                     const mepa_debug_info_t   *const info)
@@ -2523,5 +2552,6 @@ mepa_ts_driver_t indy_ts_drivers = {
     .mepa_ts_fifo_empty                 = indy_ts_tx_ts_get,
     .mepa_ts_test_config                = indy_ts_test_config,
     .mepa_ts_fifo_get                   = indy_ts_fifo_get,
+    .mepa_ts_pch_mch_error_info_get     = indy_ts_pch_mch_error_get,
 };
 #endif // !defined MEPA_LAN8814_LIGHT
