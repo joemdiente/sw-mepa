@@ -92,7 +92,8 @@ static mscc_appl_trace_group_t trace_groups[10] = {
 #define MAX_HASK_KEY_LEN 16        /* SAK Hash key length */
 #define MAX_SALT_KEY_LEN 12        /* SAK Salt length for XPN */
 #define XPN_SSCI_LEN     4         /* Short Secure Channel Identifier length for XPN */
-#define VSC_PHY_MAX_CP_RULES 26    /* Maximum Control Packet Rules supported */
+#define VSC_PHY_MAX_CP_RULES 26    /* Maximum Control Packet Rules supported for VSC PHYs */
+#define LAN80XX_MAX_CP_RULES 18    /* Maximum Control Packet Rules Supported for LAN80XX PHYs */
 
 #define MASK_16BIT       0xFFFF                 /* 16 Bit Mask value */
 #define MASK_32BIT       0xFFFFFFFF             /* 32 Bit Mask value */
@@ -1623,7 +1624,7 @@ static void cli_cmd_macsec_seq_num_set(cli_req_t *req)
                 T_E("\n Error in getting the Seq number Threshold on Port : %d \n", iport);
                 return;
             }
-            cli_printf("\n Sequence Number threshold on port %d is    : %d\n", iport, threshold);
+            cli_printf("\n Sequence Number threshold on port %ld is    : %d\n", iport, threshold);
         } else {
            if(mreq->seq_threshold_value == 0) {
                T_E("\n Sequence Threshold Value Cannot be zero configure value on port : %d \n", iport);
@@ -1915,23 +1916,31 @@ static void cli_cmd_cltr_frame_set(cli_req_t *req)
 static void cli_cmd_cltr_frame_get(cli_req_t *req)
 {
     mepa_rc rc;
+    uint32_t max_rules = 0;
+    demo_phy_info_t phy_family;
     if ((rc = mepa_dev_check(meba_macsec_instance, req->port_no)) != MEPA_RC_OK) {
         printf(" Dev is Not Created for the port : %d\n", req->port_no);
         return;
     }
+
+    if ((rc = phy_family_detect(meba_macsec_instance, req->port_no, &phy_family)) != MEPA_RC_OK) {
+        T_E("\n Error in Detecting PHY Family on Port %d\n", req->port_no);
+        return;
+    }
+    max_rules = (phy_family.family == PHY_FAMILY_MALIBU_25G) ? LAN80XX_MAX_CP_RULES : VSC_PHY_MAX_CP_RULES;
     mepa_macsec_control_frame_match_conf_t conf;
     cli_printf("\n\n Rules configured for 802.1X Control Traffic Bypass on Port %d", req->port_no);
     cli_printf("\n==================================================================================================\n");
-    cli_printf("\n %-10s%-15s%-20s%s", "Rule id", "Ethertype", "DMAC Address", "Match");
+    cli_printf("\n %-10s%-15s%-30s%s", "Rule id", "Ethertype", "DMAC Address", "Match");
     cli_printf("\n---------------------------------------------------------------------------------\n");
-    for(uint32_t i = 0; i < VSC_PHY_MAX_CP_RULES; i++) {
+    for(uint32_t i = 0; i < max_rules; i++) {
         if ((rc = mepa_macsec_control_frame_match_conf_get(meba_macsec_instance->phy_devices[req->port_no], req->port_no, &conf, i)) != MEPA_RC_OK) {
             T_E("\n Error in Geting Control Match Configuration on port : %d \n", req->port_no);
             return;
         }
         if(conf.match > 1) {
-            cli_printf("\n %-10d%-15d%02d-%02d-%02d-%02d-%02d-%02d", i, conf.etype, conf.dmac.addr[0], conf.dmac.addr[1], conf.dmac.addr[2],
-                      conf.dmac.addr[3], conf.dmac.addr[5], conf.dmac.addr[6]); 
+            cli_printf("\n %-10d%-15x%02x-%02x-%02x-%02x-%02x-%02x", i, conf.etype, conf.dmac.addr[0], conf.dmac.addr[1], conf.dmac.addr[2],
+                      conf.dmac.addr[3], conf.dmac.addr[4], conf.dmac.addr[5]); 
             if(conf.match == MEPA_MACSEC_MATCH_DMAC) {
                 cli_printf("   %s\n", "DMAC");
             } else if(conf.match == MEPA_MACSEC_MATCH_ETYPE) {
@@ -1996,7 +2005,7 @@ static void cli_cmd_macsec_inst_get(cli_req_t *req)
         if(inst_get.no_secy == 0) {
             cli_printf("\n  --         --           --          --                   --                  --\n");
         }
-		for(int i = 0; i < inst_get.no_secy; i++) {
+        for(int i = 0; i < inst_get.no_secy; i++) {
             cli_printf("%    -12d%-13d%-13d", inst_get.secy_vport[i], inst_get.secy_inst_count[i].no_txsc, inst_get.secy_inst_count[i].txsc_inst_count.no_sa);
             if(inst_get.secy_inst_count[i].txsc_inst_count.no_sa == 0) {
                 cli_printf("%-20s", "--");
@@ -2044,7 +2053,7 @@ static void cli_cmd_macsec_cmds()
     cli_printf("\n %-20s| %-80s| %s", "tx_sa_create", "<port_no> port-id <port_id> an <an_no> next-pn <pn> conf [true|false]", "Transmit Secure Association Create");
     cli_printf("\n %-20s| %-80s| %s", "rx_sa_create", "<port_no> port-id <port_id> sc-id <id> an <an_no> lowest-pn <pn>", "Receive Secure Association Create");
     cli_printf("\n %-20s| %-80s| %s", "tx_sa_del", "<port_no> port-id <port_id> an <an_no>", "Transmit Secure Association Delete");
-    cli_printf("\n %-20s| %-80s| %s", "rx_sa_del", "<port_no> port-id <port_id> sc-id <id>", "Receive Secure Association Delete");
+    cli_printf("\n %-20s| %-80s| %s", "rx_sa_del", "<port_no> port-id <port_id> sc-id <id> an <an_no>", "Receive Secure Association Delete");
     cli_printf("\n %-20s| %-80s| %s", "rx_sa_pn_upd", "<port_no> port-id <port_id> sc-id <id> an <an_no> lowest-pn <pn>", "Receive SA Lowest PN Update");
     cli_printf("\n %-20s| %-80s| %s", "statistics secy", "<port_no> port-id <port_id> [get|clear]", "SecY Staticstics Get or Clear");
     cli_printf("\n %-20s| %-80s| %s", "statistics tx_sc", "<port_no> port-id <port_id> [get|clear]", "Tx Secure Channel Statistics Get or Clear");
@@ -2061,6 +2070,7 @@ static void cli_cmd_macsec_cmds()
     cli_printf("\n %-20s| %-80s| %s", "ctrl_frame set", "<port_no> ethtype <ether_type> dst_mac <mac_address>", "802.1X Control Traffic Bypass Confg Set");
     cli_printf("\n %-20s| %-80s| %s", "ctrl_frame get", "<port_no>", "802.1X Control Traffic Bypass Confg Get");
     cli_printf("\n %-20s| %-80s| %s", "ctrl_frame del", "<port_no> <rule_list>", "802.1X Control Traffic Bypass Confg Del");
+    cli_printf("\n %-20s| %-80s| %s", "conf_get [secy|tx_sc|tx_sa|rx_sc|rx_sa] <port_no> port-id <port_id> sc-id <id> an <an_no>", "Get MACsec Configurations");
     cli_printf("\n\n");
     return;
 }
@@ -2468,7 +2478,7 @@ static cli_cmd_t cli_cmd_macsec_table[] = {
     },
 
     {
-        "rx_sa_del <port_no> port-id <port_id> sc-id <id>",
+        "rx_sa_del <port_no> port-id <port_id> sc-id <id> an <an_no>",
         "Delete Receive Secure Association",
         cli_cmd_macsec_rx_sa_del,
     },
