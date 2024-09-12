@@ -258,7 +258,7 @@ static void cli_cmd_chip_specific_synce_conf(cli_req_t *req)
     snprintf(synce_config_file, sizeof(synce_config_file), "/root/mepa_scripts/%s", req->file_name);
     FILE *fp = fopen(synce_config_file, "r");
     if(fp == NULL) {
-        T_E("%s : file open error. Porvide Valid Filename: synce_config.json", req->file_name);
+        T_E("%s : file open error. Provide Valid Filename: synce_config.json", req->file_name);
         return;
     }
     if(!(fseek(fp, 0, SEEK_END)) && ftell(fp)) {

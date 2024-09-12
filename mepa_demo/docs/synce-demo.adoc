@@ -20,15 +20,13 @@ Following methods used for SyncE-Demo Application.
 * Chip Specific SyncE demo for specific PHY's
 
 == Directory
-* `./mepa_demo/mepa_apps/phy_synce.c` - Source File for Generic SyncE Demo Application
-* `./mepa_demo/mepa_scripts/phy10g_synce_config.json` - JSON file for Malibu10G config, Python script will take configuration from this File
-* `./mepa_demo/mepa_scripts/lan8814_synce_config.json` - JSON file for INDY/VIPER config, Python script will take configuration from this File
-* `./mepa_demo/mepa_scripts/synce_config.py` - Python script for chip specific configuration of SyncE
+* `./mepa_demo/mepa_apps/phy_synce.c` - Source File for Generic and chip specific SyncE Demo Application
+* `./mepa_demo/mepa_scripts/synce_config.json` - JSON file for Chip specific Sync-E config, application will take configuration from this File
 
 == Prerequisites
 SyncE Demo Application to run on EDSx Platform User needs to flash `arm64_vsc7558MSEC.ext4` image on
 eMMC flash, the application will not work with `.itb` image because it doesn't have the Linux File System.
-To Configure the SyncE we have JSON file and python script in Linux File System.
+To Configure the Chip specific SyncE we have a JSON file.
 
 == Generic SyncE Demo Application
 
@@ -77,16 +75,16 @@ clkouta|clkoutb                        :
 
 == Chip-Specific SyncE Demo Appplication
 
-Configure all the options in the chip specific JSON file. Python script will read the populated structure from JSON file
+Configure all the options in the chip specific JSON file. Chip specific synce application will read the populated structure from JSON file
 and configure the SyncE by calling API's.
 
-=== Procedure to execute Python script
+=== Procedure to execute Chip specific Sync-E
 ----
 #cd mepa-scripts
-#python synce_config.py -p <port_no>
+# mepa-cmd chip_specific_synce <port_no> -f synce_config.json
 ----
 
-Note: For M10G, in the phy10g_synce_config.json file when 'mode' option is configured with VTSS_CKOUT_SQUELCH_SRC_LINK_LINE0/1/2/3 or HOST0/1/2/3
+Note: For VSC8258 PHY, in the synce_config.json file when 'mode' option is configured with VTSS_CKOUT_SQUELCH_SRC_LINK_LINE0/1/2/3 or HOST0/1/2/3
 squelch-inverse should be configured as '1'.
 
 == Recovered clock frequency measurement

@@ -1,13 +1,13 @@
-{ 	"1g_synce": {
-    		"src":"MEPA_SYNCE_CLOCK_SRC_SERDES_MEDIA",
-    		"dst":"MEPA_SYNCE_CLOCK_DST_1",
-    		"freq":"MEPA_FREQ_125M"
-},
-	"10g_synce": {
-    		"mode":"VTSS_PHY_10G_LINE0_RECVRD_CLOCK",
-    		"src":'VTSS_CKOUT_NO_SQUELCH",
-    		"freq":"VTSS_PHY_10G_SCKOUT_125_00",
-    		"squelch_inv":0,
-    		"enable":1
-	}
+{"1g_synce": {
+   "src": "MEPA_SYNCE_CLOCK_SRC_SERDES_MEDIA",
+   "dst": "MEPA_SYNCE_CLOCK_DST_1",
+   "freq": "MEPA_FREQ_125M"
+  },
+  "10g_synce": {
+    "mode": "VTSS_PHY_10G_LINE0_RECVRD_CLOCK",
+    "src": "VTSS_CKOUT_NO_SQUELCH",
+    "freq": "VTSS_PHY_10G_SCKOUT_125_00",
+    "squelch_inv": 0,
+    "enable": 1
+   }
 }
