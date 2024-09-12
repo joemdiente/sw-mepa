@@ -442,14 +442,14 @@ static mepa_rc indy_reset(mepa_device_t *dev, const mepa_reset_param_t *rst_conf
     return MEPA_RC_OK;
 }
 
-mepa_rc indy_rep_count_set(mepa_device_t *dev, const uint8_t rep_cnt)
+mepa_rc lan8814_rep_count_set(mepa_device_t *dev, const uint8_t rep_cnt)
 {
     phy_data_t *data = (phy_data_t *) dev->data;
     data->rep_cnt = rep_cnt;
     return MEPA_RC_OK;
 }
 
-mepa_rc indy_downshift_conf_set(mepa_device_t *dev, const indy_phy_downshift_t *dsh)
+mepa_rc lan8814_downshift_conf_set(mepa_device_t *dev, const indy_phy_downshift_t *dsh)
 {
     phy_data_t *data = (phy_data_t *) dev->data;
     if (!dsh->dsh_enable && data->dsh_conf.dsh_enable) {

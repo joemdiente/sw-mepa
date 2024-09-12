@@ -43,6 +43,11 @@ pages:
         - src: "mepa/docs/eee.adoc"
         - src: "mepa/docs/phy-reset-considerations.adoc"
 
+    - name: "PHY-Specific Functional Descriptions"
+      pages:
+        - name: "LAN8814"
+          src:  "mepa/docs/lan8814-chip-specific.adoc"
+
     - name: "MEPA API Reference"
       pages:
         - src:  "sw-mesa/me/include/microchip/ethernet/common.h"
@@ -51,6 +56,10 @@ pages:
         - src:  "mepa/include/microchip/ethernet/phy/api/types.h"
         - src:  "mepa/include/microchip/ethernet/phy/api/phy.h"
         - src:  "mepa/include/microchip/ethernet/phy/api.h"
+
+    - name: "PHY-Specific API Reference"
+      pages:
+        - src:  "mepa/microchip/lan8814/include/microchip/lan8814_cs.h"
 
     - name: "Licenses"
       src:  "mepa/docs/licenses.adoc"

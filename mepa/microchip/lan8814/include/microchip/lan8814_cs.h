@@ -42,7 +42,7 @@ typedef struct {
   * This API needs to be called for all the ports by the application before mepa_phy_reset()
   *
   **/
-mepa_rc indy_rep_count_set(mepa_device_t *dev, const uint8_t rep_cnt);
+mepa_rc lan8814_rep_count_set(mepa_device_t *dev, const uint8_t rep_cnt);
 
 /**
  * \brief
@@ -60,6 +60,6 @@ mepa_rc indy_rep_count_set(mepa_device_t *dev, const uint8_t rep_cnt);
  * and couldn't establish link for 4 or 6 secs the speed will be downshifted from 1G to 100M.
  */
 
-mepa_rc indy_downshift_conf_set(mepa_device_t *dev, const indy_phy_downshift_t *dsh);
+mepa_rc lan8814_downshift_conf_set(mepa_device_t *dev, const indy_phy_downshift_t *dsh);
 
 #endif
