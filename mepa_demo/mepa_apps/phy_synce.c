@@ -29,6 +29,11 @@
 #define VIPER_PHYID 8584
 meba_inst_t meba_phy_instances;
 
+static int cli_parm_clk_src (cli_req_t *req);
+static int cli_parm_freq (cli_req_t *req);
+static int cli_parm_clk_out (cli_req_t *req);
+static void cli_cmd_synce_conf_set (cli_req_t *req);
+
 static mscc_appl_trace_module_t trace_module = {
     .name = "phy_synce_config"
 };
@@ -74,6 +79,42 @@ typedef struct {
     freq_t            freq;/**< recovered clock out frequency */
 } port_synce_conf_set_t;
 
+static cli_cmd_t cli_cmd_table[] = {
+    {
+        "synce_conf_set <port_no> [disableclk|serdes|coppermedia|clk1|clk2] [25mhz|31.25mhz|125mhz|156.25mhz] [clkouta|clkoutb]",
+        "syncE configuration set for particular port number",
+        cli_cmd_synce_conf_set
+    },
+};
+
+static cli_parm_t cli_parm_table[] = {
+    {
+        "disableclk|serdes|coppermedia|clk1|clk2",
+        "DISABLECLK: Disable clock source\n"
+        "SERDES: Serdes clock source\n"
+        "COPPERMEDIA: Coppermedia clock source\n"
+        "CLK1: clock source1\n"
+        "CLK2: clock source2\n",
+        CLI_PARM_FLAG_NO_TXT | CLI_PARM_FLAG_SET,
+        cli_parm_clk_src
+    },
+    {
+        "25mhz|31.25mhz|125mhz|156.25mhz",
+        "25MHZ: 25mhz expected clock frequency\n"
+        "31.25MHZ: 31.25mhz expected clock frequency\n"
+        "125MHZ: 125mhz expected clock frequency\n"
+        "156.25MHZ: 156.25mhz expected clock frequency\n",
+        CLI_PARM_FLAG_NONE,
+        cli_parm_freq
+    },
+    {
+        "clkouta|clkoutb",
+        "clkoutA: Recovered clock output A\n"
+        "clkoutB: Recovered clock output B\n",
+        CLI_PARM_FLAG_SET,
+        cli_parm_clk_out
+    },
+};
 static void cli_cmd_synce_conf_set(cli_req_t *req)
 {
     port_synce_conf_set_t *mreq = req->module_req;
@@ -120,8 +161,6 @@ static void cli_cmd_synce_conf_set(cli_req_t *req)
         {
             T_E("\nINDY: Error setting Synce configuration \n");
             return;
-        } else {
-            cli_printf("SyncE configured for the PHY");
         }
     } else if((phy_info.part_number == M10G_PHYID1) || (phy_info.part_number == M10G_PHYID2) || (phy_info.part_number == M10G_PHYID3)) {
         /* MALIBU10G PHY*/
@@ -151,13 +190,8 @@ static void cli_cmd_synce_conf_set(cli_req_t *req)
         {
             mreq->freq = PHY_10G_SCKOUT_125_00;
         }
-        switch(mreq->freq)
+        if(mreq->freq > PHY_10G_SCKOUT_125_00)
         {
-        case PHY_10G_SCKOUT_156_25:
-        case PHY_10G_SCKOUT_125_00:
-            break;
-        default:
-            mreq->freq = PHY_10G_SCKOUT_INVALID;
             T_E("\n Provide valid clock frequency for the PHY \n");
             return;
         }
@@ -177,13 +211,12 @@ static void cli_cmd_synce_conf_set(cli_req_t *req)
         {
             T_E("\nMALIBU10G: Error setting Synce configuration \n");
             return;
-        } else {
-            cli_printf("\nSyncE configured for the PHY\n");
         }
     } else {
         T_E("SyncE not supported for this PHY\n");
         return;
     }
+    cli_printf("SyncE configured for the PHY\n");
 }
 
 static int cli_parm_clk_src (cli_req_t *req)
@@ -258,43 +291,6 @@ static int cli_parm_clk_out (cli_req_t *req)
     return 0;
 }
 
-static cli_cmd_t cli_cmd_table[] = {
-    {
-        "synce_conf_set <port_no> [disableclk|serdes|coppermedia|clk1|clk2] [25mhz|31.25mhz|125mhz|156.25mhz] [clkouta|clkoutb]",
-        "syncE configuration set for particular port number",
-        cli_cmd_synce_conf_set
-    },
-};
-
-static cli_parm_t cli_parm_table[] = {
-    {
-        "disableclk|serdes|coppermedia|clk1|clk2",
-        "DISABLECLK: Disable clock source\n"
-        "SERDES: Serdes clock source\n"
-        "COPPERMEDIA: Coppermedia clock source\n"
-        "CLK1: clock source1\n"
-        "CLK2: clock source2\n",
-        CLI_PARM_FLAG_NO_TXT | CLI_PARM_FLAG_SET,
-        cli_parm_clk_src
-    },
-    {
-        "25mhz|31.25mhz|125mhz|156.25mhz",
-        "25MHZ: 25mhz expected clock frequency\n"
-        "31.25MHZ: 31.25mhz expected clock frequency\n"
-        "125MHZ: 125mhz expected clock frequency\n"
-        "156.25MHZ: 156.25mhz expected clock frequency\n",
-        CLI_PARM_FLAG_NONE,
-        cli_parm_freq
-    },
-    {
-        "clkouta|clkoutb",
-        "clkoutA: Recovered clock output A\n"
-        "clkoutB: Recovered clock output B\n",
-        CLI_PARM_FLAG_SET,
-        cli_parm_clk_out
-    },
-};
-
 static void phy_cli_init(void)
 {
     int i;
@@ -324,7 +320,6 @@ void mscc_appl_phy_synce(mscc_appl_init_t *init)
     case MSCC_INIT_CMD_INIT:
         phy_cli_init();
         break;
-
     default:
         break;
     }
