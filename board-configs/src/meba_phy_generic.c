@@ -64,7 +64,7 @@ void mem_free(struct mepa_callout_ctx *ctx, void *ptr)
 }
 
 static void meba_phy_config(meba_inst_t inst, const vtss_inst_t vtss_instance, mepa_port_no_t port_no) {
-    mepa_phy_info_t phy_info;
+    mepa_phy_info_t phy_info = {};
     mepa_reset_param_t phy_reset = {};
 
     /* Pre Reset Configuration */
@@ -74,6 +74,7 @@ static void meba_phy_config(meba_inst_t inst, const vtss_inst_t vtss_instance, m
 
     /* PHY Info Get */
     meba_phy_info_get(inst, port_no, &phy_info);
+
     /* Port Configuration */
     if(phy_info.part_number == 0x8258) {
         if(port_no > 11 && port_no < 16)
@@ -195,7 +196,8 @@ void meba_phy_driver_init(meba_inst_t inst)
     inst->mepa_callout.mem_free = mem_free;
     MEPA_TRACE_FUNCTION = inst->iface.trace;
     memset(&entry, 0, sizeof(meba_port_entry_t));
-    
+    vtss_inst_t vtss_instance = NULL;
+
     for (port_no = 0; port_no < inst->phy_device_cnt; port_no++) {
         mepa_board_conf_t board_conf = {};
         board_conf.numeric_handle = port_no;
@@ -232,15 +234,9 @@ void meba_phy_driver_init(meba_inst_t inst)
                 if (rc != MESA_RC_OK && rc != MESA_RC_NOT_IMPLEMENTED) {
                     T_E(inst, "Failed to set MAC interface on PHY: %d (MAC I/F = %d), rc = %d = 0x%x", port_no, mac_if, rc, rc);
                 }
-
+                vtss_instance = board_conf.vtss_instance_ptr;
             } else {
                 T_I(inst, "Probe failed on %d", port_no);
-            }
-            if(port_no > 11 && port_no < 16) {
-                meba_phy_config(inst, board_conf.vtss_instance_ptr, port_no);
-            }
-            if(port_no > 15 && port_no < 20) {
-                meba_phy_config(inst, board_conf.vtss_instance_ptr, port_no);
             }
         }
     }
@@ -253,6 +249,9 @@ void meba_phy_driver_init(meba_inst_t inst)
             (void)mepa_link_base_port(phy_dev,
                                       inst->phy_devices[entry.phy_base_port],
                                       entry.map.chip_port);
+        }
+        if(port_no > 11 && port_no < 20) {
+            meba_phy_config(inst, vtss_instance, port_no);
         }
     }
 

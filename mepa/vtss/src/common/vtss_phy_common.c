@@ -1861,12 +1861,13 @@ vtss_rc vtss_phy_callout_set(const vtss_inst_t        inst,
 
     VTSS_ENTER();
     if ((rc = vtss_inst_port_no_check(inst, &vtss_state, port_no)) == VTSS_RC_OK) {
-        if (vtss_state->callout_ctx[port_no] || vtss_state->callout[port_no]) {
-            rc = VTSS_RC_ERROR;
-        } else {
+        if (!(vtss_state->callout_ctx[port_no] && vtss_state->callout[port_no])) {
             vtss_state->callout[port_no] = co;
             vtss_state->callout_ctx[port_no] = c;
+        } else {
+            rc = VTSS_RC_ERROR;
         }
+
     }
     VTSS_EXIT();
 

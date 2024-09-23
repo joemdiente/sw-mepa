@@ -385,61 +385,59 @@ static mepa_rc indy_selftest_stop(struct mepa_device *dev)
     return MEPA_RC_OK;
 }
 
-static mepa_rc indy_reset(mepa_device_t *dev, const mepa_reset_param_t *rst_conf)
+static mepa_rc lan8814_reset(mepa_device_t *dev, const mepa_reset_param_t *rst_conf)
 {
     phy_data_t *data = (phy_data_t *) dev->data;
     MEPA_ENTER(dev);
-    if (!data->init_done) {
-        indy_init_conf(dev);
-        indy_rev_workaround(dev);
-        indy_qsgmii_aneg(dev, FALSE);
-        data->init_done = TRUE;
-        data->rep_cnt = data->rep_cnt ? data->rep_cnt : 1;
-        if (data->dev.model == 0x26) {
-            data->crc_workaround = TRUE;
-            data->aneg_after_link_up = FALSE;
-        }
+    switch(rst_conf->reset_point) {
+        case MEPA_RESET_POINT_PRE:
+            break;
+        case MEPA_RESET_POINT_DEFAULT:
+            if (!data->init_done) {
+                indy_init_conf(dev);
+                indy_rev_workaround(dev);
+                indy_qsgmii_aneg(dev, FALSE);
+                data->init_done = TRUE;
+                data->rep_cnt = data->rep_cnt ? data->rep_cnt : 1;
+                if (data->dev.model == 0x26) {
+                    data->crc_workaround = TRUE;
+                    data->aneg_after_link_up = FALSE;
+                }
+            }
+            //Clear self-test if enabled before reset
+            indy_selftest_stop(dev);
+            WRM(dev, INDY_BASIC_CONTROL, INDY_F_BASIC_CTRL_SOFT_RESET, INDY_F_BASIC_CTRL_SOFT_RESET);
+            MEPA_MSLEEP(1);
+            // Some of the work-around registers get cleared after reset. So, they are called here
+            // after every reset.
+            indy_workaround_after_reset(dev);
+            T_I(MEPA_TRACE_GRP_GEN, "Reconfiguring the phy after reset");
+            // Reconfigure the phy after reset
+            indy_conf_set(dev, &data->conf);
+            // EEE is Disabled on Power Up
+            data->eee_conf.eee_mode = MEPA_EEE_REG_UPDATE;
+            indy_eee_mode_conf_set(dev, data->eee_conf);
+            if (data->events) {
+                indy_event_enable_set(dev, data->events, TRUE);
+            }
+            // To avoid qsgmii serdes and Gphy blocks settling in different speeds, use qsgmii soft reset and restart aneg.
+            // This must be applied after Mac serdes is configured
+            if (data->dev.model == 0x26) {
+                EP_WR(dev, INDY_QSGMII_SOFT_RESET, 0x1);
+                WRM(dev, INDY_BASIC_CONTROL, INDY_F_BASIC_CTRL_RESTART_ANEG, INDY_F_BASIC_CTRL_RESTART_ANEG);
+                data->post_mac_rst = TRUE;
+            }
+            break;
+        case MEPA_RESET_POINT_POST:
+            break;
+        default:
+            T_E(MEPA_TRACE_GRP_GEN, "\n RESET_POINT %d does not match with any of PRE, DEFAULT and POST\n", rst_conf->reset_point);
+            break;
     }
-
-    //Clear self-test if enabled before reset
-    indy_selftest_stop(dev);
-
-    if (rst_conf->reset_point == MEPA_RESET_POINT_DEFAULT) {
-        WRM(dev, INDY_BASIC_CONTROL, INDY_F_BASIC_CTRL_SOFT_RESET, INDY_F_BASIC_CTRL_SOFT_RESET);
-    } else if (rst_conf->reset_point == MEPA_RESET_POINT_POST_MAC) {
-        // To avoid qsgmii serdes and Gphy blocks settling in different speeds, use qsgmii soft reset and restart aneg.
-        // This must be applied after Mac serdes is configured.
-        if (data->dev.model == 0x26) {
-            EP_WR(dev, INDY_QSGMII_SOFT_RESET, 0x1);
-            WRM(dev, INDY_BASIC_CONTROL, INDY_F_BASIC_CTRL_RESTART_ANEG, INDY_F_BASIC_CTRL_RESTART_ANEG);
-            data->post_mac_rst = TRUE;
-        }
-    }
-
-    MEPA_MSLEEP(1);
-    // Some of the work-around registers get cleared after reset. So, they are called here
-    // after every reset.
-    indy_workaround_after_reset(dev);
-
-    MEPA_EXIT(dev);
-    T_I(MEPA_TRACE_GRP_GEN, "Reconfiguring the phy after reset");
-    // Reconfigure the phy after reset
-    if (rst_conf->reset_point == MEPA_RESET_POINT_DEFAULT) {
-        indy_conf_set(dev, &data->conf);
-
-        // EEE is Disabled on Power Up
-        data->eee_conf.eee_mode = MEPA_EEE_REG_UPDATE;
-        indy_eee_mode_conf_set(dev, data->eee_conf);
-
-        if (data->events) {
-            indy_event_enable_set(dev, data->events, TRUE);
-        }
-    }
-
     /* Recommended to Use MEPA API "mepa_framepreempt_set" to Enable/Disable Frame Preemption */
     //Configure frame preemption
     indy_framepreempt_set(dev, rst_conf->framepreempt_en);
-
+    MEPA_EXIT(dev);
     return MEPA_RC_OK;
 }
 
@@ -545,10 +543,10 @@ static mepa_rc indy_poll(mepa_device_t *dev, mepa_status_t *status)
             // Work-around for CRC errors begin.
             if (data->crc_workaround) {
                 if (!((val2 & INDY_F_ANEG_MSTR_SLV_LOCAL_RCVR_STATUS) &&
-                     (val2 & INDY_F_ANEG_MSTR_SLV_REMOTE_RCVR_STATUS)) ||
-                     !data->post_mac_rst) {
-                    //link not completely up
-                    status->link = 0;
+                    (val2 & INDY_F_ANEG_MSTR_SLV_REMOTE_RCVR_STATUS)) ||
+                    !data->post_mac_rst) {
+                        //link not completely up
+                        status->link = 0;
                 } else if (!data->aneg_after_link_up) {// poll the status for 1 iteration assuming the polling interval is 1 second apart.
                     T_I(MEPA_TRACE_GRP_GEN, "Aneg restarted on port %d", data->port_no);
                     WRM(dev, INDY_BASIC_CONTROL, INDY_F_BASIC_CTRL_RESTART_ANEG, INDY_F_BASIC_CTRL_RESTART_ANEG);
@@ -1521,7 +1519,7 @@ static mepa_rc indy_restore_config(mepa_device_t *dev)
 
     rst_cfg.reset_point = MEPA_RESET_POINT_DEFAULT;
     // Restore configuration after cable diagnostics/self-test.
-    indy_reset(dev, &rst_cfg);
+    lan8814_reset(dev, &rst_cfg);
     return MEPA_RC_OK;
 }
 // Indy phy dignostics is calculated only when there is no remote link partner for the port.
@@ -2452,7 +2450,7 @@ mepa_drivers_t mepa_lan8814_driver_init()
             .id = 0x221660,  // LAN8814 QSGMII standalone PHY
             .mask = 0xfffff0,
             .mepa_driver_delete = indy_delete,
-            .mepa_driver_reset = indy_reset,
+            .mepa_driver_reset = lan8814_reset,
             .mepa_driver_poll = indy_poll,
             .mepa_driver_conf_set = indy_conf_set,
             .mepa_driver_conf_get = indy_conf_get,
@@ -2501,7 +2499,7 @@ mepa_drivers_t mepa_lan8814_driver_init()
             .id = 0x221670,  // Single PHY based on LAN8814 instantiated in LAN966x
             .mask = 0xfffff0,
             .mepa_driver_delete = indy_delete,
-            .mepa_driver_reset = indy_reset,
+            .mepa_driver_reset = lan8814_reset,
             .mepa_driver_poll = indy_poll,
             .mepa_driver_conf_set = indy_conf_set,
             .mepa_driver_conf_get = indy_conf_get,

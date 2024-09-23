@@ -435,6 +435,10 @@ static vtss_rc vtss_phy_rd_wr_masked(vtss_state_t         *vtss_state,
     read_func = vtss_state->init_conf.miim_read;
     write_func = vtss_state->init_conf.miim_write;
 
+    if(vtss_state->callout_ctx[port_no] == NULL) {
+        VTSS_E("callout_ctx for port %d is %p", port_no,vtss_state->callout_ctx[port_no]);
+        return VTSS_RC_ERROR;
+    }
     /* Page is encoded in address */
     page = (addr >> 5);
     reg = (addr & 0x1f);
@@ -12230,6 +12234,7 @@ vtss_rc vtss_phy_pre_reset(const vtss_inst_t           inst,
         }
     }
     VTSS_EXIT();
+    VTSS_D("Exit vtss_phy_pre_reset port_no:%d", port_no);
     return rc;
 }
 
@@ -12260,6 +12265,7 @@ vtss_rc vtss_phy_post_reset(const vtss_inst_t           inst,
         }
     }
     VTSS_EXIT();
+    VTSS_D("Exit vtss_phy_post_reset port_no:%d", port_no);
     return rc;
 }
 
@@ -12276,7 +12282,7 @@ vtss_rc vtss_phy_reset(const vtss_inst_t           inst,
     vtss_state_t *vtss_state;
     vtss_rc      rc;
 
-    VTSS_D("vtss_phy_reset, Port:%d", port_no);
+    VTSS_D("Enter vtss_phy_reset, Port:%d", port_no);
     VTSS_ENTER();
     if ((rc = vtss_inst_port_no_check(inst, &vtss_state, port_no)) == VTSS_RC_OK) {
         vtss_state->phy_state[port_no].reset = *conf;
@@ -12311,6 +12317,7 @@ vtss_rc vtss_phy_reset(const vtss_inst_t           inst,
         }
     }
     VTSS_EXIT();
+    VTSS_D("Exit vtss_phy_reset, Port:%d", port_no);
     return rc;
 }
 
