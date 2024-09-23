@@ -123,28 +123,6 @@ macro(APP_TARGET)
     endif()
 
     add_executable(${A_NAME} main.c)
-    if (CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
-        if("${A_NAME}" STREQUAL "app_vsc7558TSN")
-            message (STATUS " ANAME IS : ${A_NAME}")
-            target_link_libraries(${A_NAME}
-                mesa_demo_lib_edsx
-                mesa_demo_lib
-                mesa_demo_examples_lib
-                json-c
-                ${A_MESA}
-                ${A_MEBA}_static
-            )
-     else ()
-           
-           target_link_libraries(${A_NAME}
-                mesa_demo_lib
-                mesa_demo_examples_lib
-                json-c
-                ${A_MESA}
-                ${A_MEBA}_static
-           )
-     endif()
-     else()
             target_link_libraries(${A_NAME}
                 mepa_demo_lib
                 mepa_demo_examples_lib
@@ -152,7 +130,6 @@ macro(APP_TARGET)
                 ${A_MESA}
                 ${A_MEBA}_static
             )
-     endif ()
     set_target_properties(${A_NAME} PROPERTIES OUTPUT_NAME "mesa-demo-${A_MESA}")
 
     if (${A_NAME})
