@@ -89,8 +89,7 @@ macro(MEPA_LIB)
     endif()
     target_compile_definitions(${lib_common} PRIVATE ${A_DEFS})
     target_include_directories(${lib_common}
-                               PUBLIC  ${MEPA_SOURCE_DIR}/../sw-mesa/me/include
-                                       ${MEPA_SOURCE_DIR}/../me/include
+                               PUBLIC  ${MEPA_SOURCE_DIR}/../me/include
                                        ${MEPA_SOURCE_DIR}/include
                                PRIVATE ${MEPA_SOURCE_DIR}/common/src)
 
