@@ -1275,6 +1275,20 @@ int main(int argc, char **argv)
     }
     T_D("API initialized");
 
+#ifdef MEPA_DEMO_EDSx
+#define CPU_REGS_GENERAL_CTRL_IF_SI2_ENA (0x22) // Enable interface mode for SPI2 GPIOs.
+#define IF_SI2_ENA (1 << 2)
+    uint32_t val=0;
+    if(mesa_reg_read(NULL, 0, CPU_REGS_GENERAL_CTRL_IF_SI2_ENA, &val) != MESA_RC_OK) {
+        T_E(" SI2 enabled failed with mesa_reg_read()");
+        return 1;
+    }
+    val |= IF_SI2_ENA;
+    if (mesa_reg_write(NULL, 0, CPU_REGS_GENERAL_CTRL_IF_SI2_ENA, val) != MESA_RC_OK) {
+        T_E("SI2 enabled failed with mesa_reg_write");
+        return 1;
+    }
+#endif
     // Do a board init before the port map is established in case of any changes
     MEBA_WRAP(meba_reset, init->board_inst, MEBA_BOARD_INITIALIZE);
 

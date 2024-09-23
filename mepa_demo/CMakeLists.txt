@@ -114,7 +114,7 @@ target_sources(mepa_demo_examples_lib INTERFACE ${EXAMPLE_SRC} ${EXAMPLE_SRC_MEP
 macro(APP_TARGET)
     set(options )
     set(oneValueArgs NAME MESA MEBA)
-    set(multiValueArgs )
+    set(multiValueArgs DEFS)
     cmake_parse_arguments(A "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
     option(${A_NAME} "Build the MESA DEMO application for ${MESA}" OFF)
     mark_as_advanced(${A_NAME})
@@ -123,6 +123,7 @@ macro(APP_TARGET)
     endif()
 
     add_executable(${A_NAME} main.c)
+    target_compile_definitions(${A_NAME} PRIVATE ${A_DEFS})
             target_link_libraries(${A_NAME}
                 mepa_demo_lib
                 mepa_demo_examples_lib
@@ -251,8 +252,8 @@ macro(IMG_TARGET)
     endif()
 endmacro()
 
-APP_TARGET(NAME app_vsc7558TSN         MESA vsc7558TSN         MEBA meba_sparx5)
-APP_TARGET(NAME app_vsc7558MSEC        MESA vsc7558TSN         MEBA meba_sparx5_macsec)
+APP_TARGET(NAME app_vsc7558TSN         MESA vsc7558TSN         MEBA meba_sparx5 DEFS -DMEPA_DEMO_EDSx)
+APP_TARGET(NAME app_vsc7558MSEC        MESA vsc7558TSN         MEBA meba_sparx5_macsec -DMEPA_DEMO_EDSx)
 APP_TARGET(NAME app_lan966x            MESA lan966x            MEBA meba_lan966x)
 APP_TARGET(NAME app_lan966x_lm         MESA lan966x_lm         MEBA meba_lan966x)
 APP_TARGET(NAME app_lan966x_ad         MESA lan966x_ad         MEBA meba_lan966x)
