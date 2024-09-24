@@ -12,6 +12,7 @@
 #include "vtss_private.h"
 
 #include "main.h"
+#include "mesa-rpc.h"
 #include "trace.h"
 #include "cli.h"
 #include "port.h"
@@ -24,6 +25,7 @@ static int cli_parm_clk_src (cli_req_t *req);
 static int cli_parm_freq (cli_req_t *req);
 static int cli_parm_clk_out (cli_req_t *req);
 static void cli_cmd_synce_conf_set (cli_req_t *req);
+static void cli_cmd_chip_specific_synce_conf(cli_req_t *req);
 
 static mscc_appl_trace_module_t trace_module = {
     .name = "phy_synce_config"
@@ -76,6 +78,12 @@ static cli_cmd_t cli_cmd_table[] = {
         "syncE configuration set for particular port number",
         cli_cmd_synce_conf_set
     },
+    {
+        "chip_specific_synce <port_no> [-f] [filename]",
+        "Chip specific syncE configuration set for particular port number",
+        cli_cmd_chip_specific_synce_conf
+    },
+
 };
 
 static cli_parm_t cli_parm_table[] = {
@@ -113,11 +121,10 @@ static void cli_cmd_synce_conf_set(cli_req_t *req)
     mepa_synce_clock_conf_t indy_synce_conf;
     vtss_phy_10g_sckout_conf_t phy10g_synce_conf;
     struct mepa_device *dev = meba_phy_instances->phy_devices[req->port_no];
-    phy_data_t *data = (phy_data_t *)dev->data;
     demo_phy_info_t phy_family;
     mepa_rc rc;
-
-    if(!meba_phy_instances->phy_devices[req->port_no])
+    
+    if(dev == NULL)
     {
         T_E("\n Not phy is connected on this port number\n");
         return;
@@ -128,6 +135,7 @@ static void cli_cmd_synce_conf_set(cli_req_t *req)
         T_E("\n Provide Paramter clock source/frequency/clock output\n");
         return;
     }
+    phy_data_t *data = (phy_data_t *)dev->data;
     meba_phy_info_get(meba_phy_instances, req->port_no, &phy_info);
     if ((rc = phy_family_detect(meba_phy_instances, req->port_no, &phy_family)) != MEPA_RC_OK)
     {
@@ -215,6 +223,97 @@ static void cli_cmd_synce_conf_set(cli_req_t *req)
         return;
     }
     cli_printf("SyncE configured for the PHY\n");
+}
+
+static void cli_cmd_chip_specific_synce_conf(cli_req_t *req)
+{
+    mepa_synce_clock_conf_t indy_synce_conf;
+    vtss_phy_10g_sckout_conf_t phy10g_synce_conf;
+    struct json_object *jobj = NULL;
+    json_rpc_req_t json_req = {};
+    json_req.ptr = json_req.buf;
+    int size = 0;
+    char synce_config_file[128];
+    char *buffer = NULL;
+    demo_phy_info_t phy_family;
+    struct mepa_device *dev = meba_phy_instances->phy_devices[req->port_no];
+    mepa_rc rc = MEPA_RC_OK;
+
+    if(dev == NULL)
+    {
+        cli_printf(" Dev is Not Created for the port : %d\n", req->port_no);
+        return;
+    }
+    if(!req->set) {
+        cli_printf("\n Syntax: chip_specific_synce <port_no> [-f] [filename]\n");
+        T_E("\n Provide Port no and filename as arguments\n");
+        return;
+    }
+    if ((rc = phy_family_detect(meba_phy_instances, req->port_no, &phy_family)) != MEPA_RC_OK)
+    {
+        T_E("\n Error in Detecting PHY Family on Port %d\n", req->port_no);
+        return;
+    }
+    phy_data_t *data = (phy_data_t *)dev->data;
+    snprintf(synce_config_file, sizeof(synce_config_file), "/root/mepa_scripts/%s", req->file_name);
+    FILE *fp = fopen(synce_config_file, "r");
+    if(fp == NULL) {
+        T_E("%s : file open error. Porvide Valid Filename: synce_config.json", req->file_name);
+        return;
+    }
+    if(!(fseek(fp, 0, SEEK_END)) && ftell(fp)) {
+        size = ftell(fp);
+        buffer = (char*)malloc(size);
+        if(buffer == NULL) {
+            T_E("Fatal: failed to allocate %d bytes.\n", size);
+            goto file_close;
+        }
+        fseek(fp, 0, SEEK_SET);
+        if(!fread(buffer, 1, size, fp)) {
+            T_E("File read error");
+            goto file_close;
+        }
+        jobj = json_tokener_parse(buffer);
+        if(jobj == NULL) {
+            T_E("could not parse parms from file: %s", req->file_name);
+            goto file_close;
+        }
+        if((phy_family.family == PHY_FAMILY_INDY) || (phy_family.family == PHY_FAMILY_VIPER))
+        {
+            if(json_rpc_get_name_json_object(&json_req, jobj, "1g_synce", &json_req.params) != MESA_RC_OK)
+            {
+                T_E("object name not found in file: %s", req->file_name);
+                goto file_close;
+            }
+            if(json_rpc_get_mepa_synce_clock_conf_t(&json_req, json_req.params, &indy_synce_conf) != MESA_RC_OK)
+            {
+                T_E("Error in the json configuration");
+                goto file_close;
+            }
+            if(meba_phy_synce_clock_conf_set(meba_phy_instances, req->port_no, &indy_synce_conf) != MESA_RC_OK)
+                T_E("Error in Configuring the SyncE");
+            goto file_close;
+
+        } else if(phy_family.family == PHY_FAMILY_MALIBU_10G)
+        {
+            if(json_rpc_get_name_json_object(&json_req, jobj, "10g_synce", &json_req.params) != MESA_RC_OK)
+            {
+                T_E("object name not found in file: %s", req->file_name);
+                goto file_close;
+            }
+            if(json_rpc_get_vtss_phy_10g_sckout_conf_t(&json_req, json_req.params, &phy10g_synce_conf) != MESA_RC_OK) {
+                T_E("Error in the json configuration");
+                goto file_close;
+            }
+            if(vtss_phy_10g_sckout_conf_set(data->vtss_instance, req->port_no, &phy10g_synce_conf) != MESA_RC_OK)
+                T_E("Error in Configuring the SyncE");
+            goto file_close;
+
+        }
+file_close:
+        free(buffer);
+        fclose(fp);
+    }
 }
 
 static int cli_parm_clk_src (cli_req_t *req)
@@ -322,3 +421,4 @@ void mscc_appl_phy_synce(mscc_appl_init_t *init)
         break;
     }
 }
+
