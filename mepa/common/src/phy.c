@@ -76,7 +76,14 @@ uint32_t mepa_phy_id_get(const mepa_callout_t    MEPA_SHARED_PTR *callout,
         callout->mmd_read(callout_ctx, 0x1, 0x2, &reg2);
         callout->mmd_read(callout_ctx, 0x1, 0x3, &reg3);
     }
-
+    if (callout->spi_read) {
+            callout->spi_read(callout_ctx,  0, 0x1e, 0, &phy_id);
+            for (i = 0; i < sizeof(special) / sizeof(special[0]); i++) {
+                if (phy_id == special[i]) {
+                    return phy_id;
+                }
+            }
+    }
     phy_id = ((uint32_t)reg2) << 16 | reg3;
 
     return phy_id;

@@ -2284,8 +2284,8 @@ typedef struct {
     BOOL enable;          /**< Enable or disable packet generator */
     BOOL ptp;             /**< PTP or standard frame              */
     BOOL ingress;         /**< Ingress or egress                  */
-    BOOL frames;         /**< frames or idles                    */
-    BOOL frame_single;   /**< Generate single packet             */
+    BOOL frames;          /**< frames or idles                    */
+    BOOL frame_single;    /**< Generate single packet             */
     u16 etype;            /**< Ethertype                          */
     u8 pkt_len;           /**< Packet length,min=64,max=16KB      */
     u32 ipg_len;          /**< Inter Packet Gap                   */
@@ -2309,7 +2309,7 @@ typedef struct {
  **/
 vtss_rc vtss_phy_10g_pkt_gen_conf(const vtss_inst_t      inst,
                                  const vtss_port_no_t   port_no,
-                                 vtss_phy_10g_pkt_gen_conf_t *const conf);
+                                 const vtss_phy_10g_pkt_gen_conf_t *const conf);
 
 /** \brief 10G PHY Packet monitor configuration */
 typedef enum {

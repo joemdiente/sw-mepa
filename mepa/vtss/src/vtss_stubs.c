@@ -847,7 +847,7 @@ vtss_rc vtss_phy_10g_prbs_mon_conf(const vtss_inst_t inst, const vtss_port_no_t 
     return VTSS_RC_NOT_IMPLEMENTED;
 }
 
-vtss_rc vtss_phy_10g_pkt_gen_conf(const vtss_inst_t inst, const vtss_port_no_t port_no, vtss_phy_10g_pkt_gen_conf_t *const conf)
+vtss_rc vtss_phy_10g_pkt_gen_conf(const vtss_inst_t inst, const vtss_port_no_t port_no, const vtss_phy_10g_pkt_gen_conf_t *const conf)
 {
     return VTSS_RC_NOT_IMPLEMENTED;
 }
@@ -2017,3 +2017,5 @@ vtss_rc vtss_phy_patch_settings_get(const vtss_inst_t    inst,
     return VTSS_RC_NOT_IMPLEMENTED;
 }
 #endif // !defined(VTSS_CHIP_CU_PHY)
+
+

@@ -267,6 +267,9 @@ end
 $tar = "#{$ws}/#{$ws}.tar"
 # copy the latest mepa into mesa
 run "cd sw-mesa; rm -r mepa"
+run "cd sw-mesa; rm -r meba mesa/demo"
+run "cp -r board-configs/ sw-mesa/meba"
+run "cp -r mepa_demo sw-mesa/mesa/demo"
 run "cp -r mepa sw-mesa/"
 run "cp -r me sw-mesa/"
 run "cp -r .cmake sw-mesa/"

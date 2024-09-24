@@ -33,7 +33,7 @@ out = ARGV[1] if ARGV.size > 1
 
 if File.exist? out
     puts "Folder: #{out} exists already!"
-    exit 1
+    run "rm -r #{out}"
 end
 
 c = $yaml["presets"][name]

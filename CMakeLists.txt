@@ -268,7 +268,7 @@ if (${BUILD_MESA_DEMO})
     find_library(JSON_LIB json-c)
     mark_as_advanced(JSON_LIB)
     if (JSON_LIB)
-        #add_subdirectory(sw-mesa/mesa/demo)
+        add_subdirectory(sw-mesa/mesa/demo)
     endif()
 endif()
 

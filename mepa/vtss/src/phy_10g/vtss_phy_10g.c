@@ -4630,7 +4630,7 @@ vtss_rc vtss_phy_10g_vscope_scan_status_get(const vtss_inst_t inst,
 
 vtss_rc vtss_phy_10g_pkt_gen_conf(const vtss_inst_t      inst,
         const vtss_port_no_t   port_no,
-        vtss_phy_10g_pkt_gen_conf_t *const conf) 
+        const vtss_phy_10g_pkt_gen_conf_t *const conf)
 {
     vtss_state_t *vtss_state;
     vtss_rc      rc;

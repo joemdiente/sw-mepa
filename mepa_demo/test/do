@@ -1,0 +1,175 @@
+#!/usr/bin/env bash
+
+# Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+# SPDX-License-Identifier: MIT
+
+set -e
+
+if (( $# < 2 )); then
+   echo "Usage: $0 oc/op/j2/j48/st/ca1/ca2/fa/mi/ms/me/mr/ml [<test_server>] <test_script> [short]"
+   exit
+fi
+
+chip=$1
+
+dir=build-mipsel
+case $chip in
+     oc)
+     ts=dk-t35-1
+     img=mipsel_vsc7514_pcb123.mfi
+     ;;
+
+     op)
+     ts=dk-t34-2
+     img=ls1046_vsc7512.itb
+     dir=build-arm64
+     ;;
+
+     j2)
+     ts=dk-t34-0
+     img=mipsel_vsc7468_pcb110.mfi
+     ;;
+
+     j48)
+     ts=dk-t35-6
+     img=mipsel_vsc7468_pcb111.mfi
+     ;;
+
+     st)
+     ts=dk-t35-2
+     img=mipsel_vsc7437.mfi
+     ;;
+
+     ca|ca2)
+     ts=dk-t35-3
+     img=mipsel_vsc7429.mfi
+     ;;
+
+     ca1)
+     ts=dk-t35-4
+     img=mipsel_vsc7428.mfi
+     ;;
+
+     fa)
+     ts=dk-t34-5
+     img=arm64_vsc7558TSN.itb     # 625MHz
+#     img=arm64_vsc7546TSN.itb     # 250MHZ
+#     img=arm64_vsc7552TSN.itb     # 500MHz
+     dir=build-arm64
+     ;;
+     fa135)
+     ts=dk-t34-3
+     img=arm64_vsc7558TSN.itb     # 625MHz
+     dir=build-arm64
+     ;;
+
+     mi)
+     ts=dk-t34-1
+     img=arm64_ls1046_lan966x_ad.itb
+     dir=build-arm64
+     ;;
+
+     ms)
+     ts=dk-t35-5
+     img=armv7_lan966x_sr.itb
+     dir=build-arm
+     ;;
+
+     me)
+     ts=dk-t33-5
+     img=armv7_lan966x.itb
+     dir=build-arm
+     ;;
+
+     mr)
+     ts=dk-t33-4
+     img=armv7_lan9662.itb
+     dir=build-arm
+     ;;
+
+     ml)
+     ts=dk-t33-5
+     img=armv7_lan966x_lm.itb
+     dir=build-arm
+     ;;
+
+     ms8)
+     ts=dk-t33-5
+     img=armv7_lan966x.itb
+     dir=build-arm
+     ;;
+
+     la2)
+     ts=dk-t36-2
+     img=arm64_lan9698RED.itb
+     dir=build-arm64
+     ;;
+
+     la3)
+     ts=dk-t36-3
+     img=arm64_lan9698RED.itb
+     dir=build-arm64
+     ;;
+
+     ll)
+     ts=dk-t36-2
+     img=arm64_lan9698RED_lm.itb
+     dir=build-arm64
+     ;;
+
+     *)
+     echo "Illegal chip: $chip"
+     exit
+     ;;
+esac
+
+cnt=$#
+suffix=""
+last=${!#}
+
+if [ $last == "brief" ]; then
+    suffix="--brief"
+    ((cnt--))
+fi
+
+if [ $last == "short" ]; then
+    suffix="--short"
+    ((cnt--))
+fi
+
+if [ $cnt == 2 ]; then
+  file=$2
+else
+  ts=$2
+  file=$3
+fi
+
+if [ ! -f $file ]; then
+   echo "Test script not found: $file"
+   exit
+fi
+
+#echo $ts $dir $img $file
+cd ../../../$dir
+make -j 10
+echo "----Make completed-----"
+rel=1
+
+if [ -f $HOME/.mscc-libeasy-topology.yaml ]; then
+    echo "----topo exist release----"
+    et release
+    rel=0
+fi
+
+echo "----Reserve test system----"
+et reserve $ts
+
+echo "----Upload image----"
+et upload mesa/demo/$img
+cd -
+
+echo "----Run test----"
+./$file | libeasy/xml2console.rb $suffix
+if [ $rel == 1 ]; then
+    et release
+fi

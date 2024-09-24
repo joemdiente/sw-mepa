@@ -68,6 +68,20 @@ static vtss_rc mmd_write(vtss_state_t        *inst,
     return inst->callout[port_no]->mmd_write(inst->callout_ctx[port_no], mmd, addr, value);
 }
 
+static vtss_rc spi_read_write (const vtss_inst_t inst,
+                               vtss_port_no_t port_no,
+                               BOOL           read,
+                               u8             dev,
+                               u16            reg_num,
+                               u32            *const data)
+{
+
+    if(read) {
+        return inst->callout[port_no]->spi_read(inst->callout_ctx[port_no], port_no, dev, reg_num, data);
+    }
+    return inst->callout[port_no]->spi_write(inst->callout_ctx[port_no], port_no, dev, reg_num, data);
+}
+
 static void trace_func(const vtss_phy_trace_group_t group,
                        const vtss_phy_trace_level_t level,
                        const char                   *location,
@@ -372,7 +386,8 @@ static mepa_rc mscc_vtss_create(const mepa_callout_t    MEPA_SHARED_PTR *callout
         conf.mmd_read_inc = mmd_read_inc;
         conf.mmd_write = mmd_write;
         conf.trace_func = trace_func;
-
+        if(callout->spi_read && callout->spi_write)
+            conf.spi_32bit_read_write = spi_read_write;
         // No need for delegate as the callouts are binary compatible
         conf.lock_enter = callout->lock_enter;
         conf.lock_exit = callout->lock_exit;
@@ -609,7 +624,7 @@ static mepa_rc mscc_1g_conf_set(mepa_device_t *dev, const mepa_conf_t *config)
             phy_config.force_ams_sel = MEPA_PHY_MEDIA_FORCE_AMS_SEL_NORMAL;
         }
 
-        (void)vtss_phy_conf_1g_set(NULL, data->port_no, &cfg_neg);
+        (void)vtss_phy_conf_1g_set(data->vtss_instance, data->port_no, &cfg_neg);
         phy_config.forced.speed = config->speed;
         phy_config.forced.fdx = config->fdx;
 
