@@ -2070,7 +2070,7 @@ static void cli_cmd_macsec_cmds()
     cli_printf("\n %-20s| %-80s| %s", "ctrl_frame set", "<port_no> ethtype <ether_type> dst_mac <mac_address>", "802.1X Control Traffic Bypass Confg Set");
     cli_printf("\n %-20s| %-80s| %s", "ctrl_frame get", "<port_no>", "802.1X Control Traffic Bypass Confg Get");
     cli_printf("\n %-20s| %-80s| %s", "ctrl_frame del", "<port_no> <rule_list>", "802.1X Control Traffic Bypass Confg Del");
-    cli_printf("\n %-20s| %-80s| %s", "conf_get [secy|tx_sc|tx_sa|rx_sc|rx_sa] <port_no> port-id <port_id> sc-id <id> an <an_no>", "Get MACsec Configurations");
+    cli_printf("\n %-20s| %-80s| %s", "conf_get", "[secy|tx_sc|tx_sa|rx_sc|rx_sa] <port_no> port-id <port_id> sc-id <id> an <an_no>", "Get MACsec Configurations");
     cli_printf("\n\n");
     return;
 }
