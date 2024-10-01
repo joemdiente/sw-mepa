@@ -63,8 +63,13 @@ if c[:mesa]
     run "sh -c \"rm -r sw-mesa\""
   end
   puts "Fetching latest copy..."
-  #dw_file = "mesa-#{c[:mesa]}-#{c[:mesa_id]}@#{c[:mesa_branch]}"
-  dw_file = "mesa-#{c[:mesa]}#{c[:mesa_id]}#{c[:mesa_branch]}"
+  dw_file = "mesa-#{c[:mesa]}"
+  if c[:mesa_id]
+      dw_file += "-#{c[:mesa_id]}"
+  end
+  if c[:mesa_branch]
+      dw_file += "@#{c[:mesa_branch]}"
+  end
   bcmd = "sudo .cmake/docker/mchp-install-pkg -t mesa/#{c[:mesa]}-#{c[:mesa_id]}@#{c[:mesa_branch]} #{dw_file}"
   run bcmd
   run "mkdir -p sw-mesa && cp -r /opt/mscc/#{dw_file}/* sw-mesa"
