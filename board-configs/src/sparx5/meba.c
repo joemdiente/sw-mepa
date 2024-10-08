@@ -18,6 +18,7 @@
 #define PHY_ID_GPY241 0xDC00
 #define COMA_GPIO 33
 #define VTSS_TS_IO_ARRAY_SIZE 4
+#define MIIM_FREQ_CONTROLLER_0 2200000
 
 /* LED colors */
 typedef enum {
@@ -1478,6 +1479,11 @@ static mesa_rc fa_reset(meba_inst_t inst, meba_reset_point_t reset)
     switch (reset) {
         case MEBA_BOARD_INITIALIZE:
             board->func->board_init(inst);
+            /* PHYs Connected to EDSx will work at 2.2MHz MDC Frequency */
+            mesa_mdio_conf_t  mdio_conf;
+            mdio_conf.miim_freq = MIIM_FREQ_CONTROLLER_0;
+            mesa_mdio_conf_set(NULL, MESA_MIIM_CONTROLLER_0, &mdio_conf);
+
             for(int port = 12; port < 16; port++) /* slot 1 scanning */
                 phy_25g_slot1_scan(inst, port, &board->port[port].map);
             for(int port = 16; port < 20; port++) /* slot 2 scanning */
