@@ -881,6 +881,18 @@ mepa_rc mepa_start_of_frame_conf_set(struct mepa_device *dev, mepa_start_of_fram
 mepa_rc mepa_start_of_frame_conf_get(struct mepa_device *dev, mepa_start_of_frame_conf_t *const value);
 
 /**
+ * \brief PHY Set Frame Preemption
+ *
+ * \param dev   [IN]   Driver instance.
+ * \param value [IN]   Frame Preemption Enable/Disable
+ *
+ * \return
+ *   MEPA_RC_NOT_IMPLEMENTED when not supported. \n
+ *   MEPA_RC_OK on success.
+ **/
+mepa_rc mepa_framepreempt_set(struct mepa_device *dev, const mepa_bool_t value);
+
+/**
  * \brief PHY get Frame Preemption
  *
  * \param dev   [IN]   Driver instance.

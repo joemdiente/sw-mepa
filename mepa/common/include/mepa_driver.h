@@ -640,6 +640,18 @@ typedef mepa_rc (*mepa_driver_start_of_frame_write_t)(struct mepa_device *dev, m
 typedef mepa_rc (*mepa_driver_start_of_frame_read_t)(struct mepa_device *dev, mepa_start_of_frame_conf_t *const value);
 
 /**
+ * \brief PHY Configure Frame Preemption
+ *
+ * \param dev   [IN]  Driver instance.
+ * \param value [IN]  Enable/Disable Frame Preemption
+ *
+ * \return
+ *   MEPA_RC_NOT_IMPLEMENTED when not supported. \n
+ *   MEPA_RC_OK on success.
+ **/
+typedef mepa_rc (*mepa_driver_framepreempt_set_t)(struct mepa_device *dev, const mepa_bool_t value);
+
+/**
  * \brief PHY get Frame Preemption
  *
  * \param dev   [IN]   Driver instance.
@@ -828,6 +840,7 @@ typedef struct mepa_driver {
     mepa_driver_sqi_read_t             mepa_driver_sqi_read;
     mepa_driver_start_of_frame_write_t mepa_driver_start_of_frame_conf_set;
     mepa_driver_start_of_frame_read_t  mepa_driver_start_of_frame_conf_get;
+    mepa_driver_framepreempt_set_t     mepa_driver_framepreempt_set;
     mepa_driver_framepreempt_get_t     mepa_driver_framepreempt_get;
     mepa_driver_selftest_start_t       mepa_driver_selftest_start;
     mepa_driver_selftest_read_t        mepa_driver_selftest_read;

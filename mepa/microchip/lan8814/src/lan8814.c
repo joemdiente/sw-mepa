@@ -436,6 +436,7 @@ static mepa_rc indy_reset(mepa_device_t *dev, const mepa_reset_param_t *rst_conf
         }
     }
 
+    /* Recommended to Use MEPA API "mepa_framepreempt_set" to Enable/Disable Frame Preemption */
     //Configure frame preemption
     indy_framepreempt_set(dev, rst_conf->framepreempt_en);
 
@@ -1721,6 +1722,17 @@ static mepa_rc indy_start_of_frame_conf_get(mepa_device_t *dev, mepa_start_of_fr
     return MEPA_RC_OK;
 }
 
+static mepa_rc indy_framepreempt_conf_set(mepa_device_t *dev, const mepa_bool_t enable)
+{
+    mepa_rc rc = MEPA_RC_ERROR;
+    MEPA_ENTER(dev);
+    //Configure frame preemption
+    rc = indy_framepreempt_set(dev, enable);
+    MEPA_EXIT(dev);
+    return rc;
+}
+
+
 static mepa_rc indy_framepreempt_get(mepa_device_t *dev, mepa_bool_t *const value)
 {
     phy_data_t *data = (phy_data_t *)dev->data;
@@ -2476,6 +2488,7 @@ mepa_drivers_t mepa_lan8814_driver_init()
             .mepa_driver_start_of_frame_conf_set = indy_start_of_frame_conf_set,
             .mepa_driver_start_of_frame_conf_get = indy_start_of_frame_conf_get,
             .mepa_driver_framepreempt_get = indy_framepreempt_get,
+            .mepa_driver_framepreempt_set = indy_framepreempt_conf_set,
             .mepa_driver_selftest_start = indy_selftest_start,
             .mepa_driver_selftest_read = indy_selftest_read,
             .mepa_driver_prbs_set = indy_prbs_set,
@@ -2521,6 +2534,7 @@ mepa_drivers_t mepa_lan8814_driver_init()
             .mepa_driver_sqi_read = indy_sqi_read,
             .mepa_driver_start_of_frame_conf_set = indy_start_of_frame_conf_set,
             .mepa_driver_start_of_frame_conf_get = indy_start_of_frame_conf_get,
+            .mepa_driver_framepreempt_set = indy_framepreempt_conf_set,
             .mepa_driver_framepreempt_get = indy_framepreempt_get,
             .mepa_driver_selftest_start = indy_selftest_start,
             .mepa_driver_selftest_read = indy_selftest_read,

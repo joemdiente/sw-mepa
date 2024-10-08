@@ -638,6 +638,15 @@ mepa_rc meba_phy_start_of_frame_conf_get(meba_inst_t inst, mepa_port_no_t port_n
     return mepa_start_of_frame_conf_get(inst->phy_devices[port_no], conf);
 }
 
+// Set framepreemption
+mepa_rc meba_phy_framepreempt_set(meba_inst_t inst, mepa_port_no_t port_no, const mepa_bool_t value)
+{
+    if ((port_no < 0) || (port_no >= inst->phy_device_cnt)) {
+        return MESA_RC_ERR_INV_PORT_BOARD;
+    }
+    return mepa_framepreempt_set(inst->phy_devices[port_no], value);
+}
+
 // Get framepreemption
 mepa_rc meba_phy_framepreempt_get(meba_inst_t inst, mepa_port_no_t port_no, mepa_bool_t *const value)
 {

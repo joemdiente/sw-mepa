@@ -1242,6 +1242,15 @@ mepa_rc mepa_start_of_frame_conf_get(struct mepa_device *dev, mepa_start_of_fram
     return dev->drv->mepa_driver_start_of_frame_conf_get(dev, rd_val);
 }
 
+mepa_rc mepa_framepreempt_set(struct mepa_device *dev, const mepa_bool_t value)
+{
+    if (!dev->drv->mepa_driver_framepreempt_set) {
+        return MESA_RC_NOT_IMPLEMENTED;
+    }
+
+    return dev->drv->mepa_driver_framepreempt_set(dev, value);
+}
+
 mepa_rc mepa_framepreempt_get(struct mepa_device *dev, mepa_bool_t *const value)
 {
     if (!dev->drv->mepa_driver_framepreempt_get) {
