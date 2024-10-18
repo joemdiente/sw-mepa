@@ -11,6 +11,7 @@
 #include "cli.h"
 #include "port.h"
 #include "phy_port_config.h"
+#include "phy_demo_apps.h"
 
 static mepa_callout_t mepa_callout;
 static mepa_board_conf_t board_conf = {};
@@ -267,6 +268,56 @@ static void cli_cmd_coma_mode(cli_req_t *req)
 
 }
 
+static void cli_cmd_fpp_set(cli_req_t *req)
+{
+    mepa_rc rc;
+    demo_phy_info_t phy_family;
+    if(meba_phy_inst->phy_devices[req->port_no] == NULL) {
+        cli_printf(" Dev is Not Created for the port : %d\n", req->port_no);
+        return;
+    }
+
+    if ((rc = phy_family_detect(meba_phy_inst, req->port_no, &phy_family)) != MEPA_RC_OK) {
+        T_E("\n Error in Detecting PHY Family on Port %d\n", req->port_no);
+        return;
+    }
+    if((phy_family.family != PHY_FAMILY_INDY) && (phy_family.family != PHY_FAMILY_MALIBU_25G)) {
+        T_E("\n PHY on Port :%d doesn't support Frame Preemption\n", req->port_no);
+        return;
+    }
+    if (mepa_framepreempt_set(meba_phy_inst->phy_devices[req->port_no], req->enable) != MEPA_RC_OK) {
+        T_E("\n Error in configuration Frame Preemption on Port :%d \n", req->port_no);
+        return;
+    }
+    return;
+}
+
+static void cli_cmd_fpp_get(cli_req_t *req)
+{
+    mepa_rc rc;
+    demo_phy_info_t phy_family;
+    mepa_bool_t val = 0;
+    if(meba_phy_inst->phy_devices[req->port_no] == NULL) {
+        cli_printf(" Dev is Not Created for the port : %d\n", req->port_no);
+        return;
+    }
+
+    if ((rc = phy_family_detect(meba_phy_inst, req->port_no, &phy_family)) != MEPA_RC_OK) {
+        T_E("\n Error in Detecting PHY Family on Port %d\n", req->port_no);
+        return;
+    }
+    if((phy_family.family != PHY_FAMILY_INDY) && (phy_family.family != PHY_FAMILY_MALIBU_25G)) {
+        T_E("\n PHY on Port :%d doesn't support Frame Preemption\n", req->port_no);
+        return;
+    }
+    if (mepa_framepreempt_get(meba_phy_inst->phy_devices[req->port_no], &val) != MEPA_RC_OK) {
+        T_E("\n Error in Getting Frame Preemption Status on Port :%d \n", req->port_no);
+        return;
+    }
+    cli_printf("\n Frame Preemption %s on Port : %d\n", val ? "Enabled" : "Disabled", req->port_no);
+    return;
+}
+
 static cli_cmd_t cli_cmd_table[] = {
     {
         "Dev Create [<port_no>]",
@@ -294,6 +345,16 @@ static cli_cmd_t cli_cmd_table[] = {
         "coma_mode [enable|disable]",
         "Enable/Disable coma mode for the PHY",
         cli_cmd_coma_mode
+    },
+    {
+        "fpp_set [<port_no>] [enable|disable]",
+        "Enable/Disable Frame Preemption on PHY",
+        cli_cmd_fpp_set
+    },
+    {
+        "fpp_get [<port_no>]",
+        "Get the Frame Preemption Status on PHY",
+        cli_cmd_fpp_get
     },
 
 };
