@@ -1169,6 +1169,11 @@ static mepa_rc phy_10g_conf_set(mepa_device_t *dev, const mepa_conf_t *config)
     phy_data_t *data = (phy_data_t *)dev->data;
     vtss_phy_10g_mode_t mode = {};
 
+    if(config->conf_10g.channel_id == MEPA_CHANNELID_NONE) {
+        T_E(data, MEPA_TRACE_GRP_GEN, "Provide valid Channel ID\n");
+        return MEPA_RC_ERROR;
+    }
+
     if (vtss_phy_10g_mode_get(data->vtss_instance, data->port_no, &mode) != MEPA_RC_OK) {
         return MEPA_RC_ERROR;
     }
@@ -1239,7 +1244,7 @@ static mepa_rc phy_10g_conf_get(mepa_device_t *dev, mepa_conf_t *config)
     config->adv_dis = true;
     config->conf_10g.oper_mode = mode.oper_mode;
     config->conf_10g.interface_mode = mode.interface;
-    config->conf_10g.channel_id = mode.channel_id;
+    config->conf_10g.channel_id = mode.channel_id + 1;
     config->conf_10g.h_media = mode.h_media;
     config->conf_10g.l_media = mode.l_media;
     config->conf_10g.channel_high_to_low = mode.channel_high_to_low;

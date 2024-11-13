@@ -11490,6 +11490,7 @@ static vtss_rc malibu_phy_10g_mode_conf_set(vtss_state_t *vtss_state,
         mode->rate = VTSS_RPTR_RATE_10_3125;
     }
     VTSS_I("phy_10g_mode_conf_set - %u\n",port_no);
+    vtss_state->phy_10g_state[port_no].mode.channel_id = vtss_state->phy_10g_state[port_no].channel_id;
     if (vtss_state->phy_10g_state[port_no].family != VTSS_PHY_FAMILY_MALIBU) {
         VTSS_E("phy_10g_mode_conf_set- chip %x is not of MALIBU family\n",(vtss_state->phy_10g_state[port_no].type));
         return VTSS_RC_ERROR;
