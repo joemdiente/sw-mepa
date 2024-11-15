@@ -15006,11 +15006,43 @@ static vtss_rc vtss_phy_reset_lcpll_private(vtss_state_t *vtss_state, vtss_port_
         VTSS_I("vtss_phy_reset_lcpll_private: Skipping LCPLL Reset, Not Valid during warmstart Port: %d", port_no);
         return VTSS_RC_OK;
     }
-
+    VTSS_I("vtss_phy_pll5g_reset: Entering LCPLL Reset private function, Port: %d \n", port_no);
     switch (ps->family) {
     case VTSS_PHY_FAMILY_ATOM:
-        VTSS_I("vtss_phy_reset_lcpll_private: Skipping LCPLL Reset, Not Valid for ATOM FAMILY Port: %d", port_no);
-        return (rc);
+        VTSS_I("vtss_phy_reset_lcpll_private: ATOM12 LCPLL Reset, Port: %d \n", port_no);
+        rc = VTSS_RC_OK;
+        VTSS_RC(vtss_phy_page_gpio(vtss_state, port_no));       // Switch to micro/GPIO register-page
+        VTSS_RC(PHY_WR_PAGE(vtss_state, port_no, VTSS_PHY_MICRO_PAGE, 0x8023));  // Read LCPLL Config Vector into PRAM
+        VTSS_RC(vtss_phy_wait_for_micro_complete(vtss_state, port_no));
+
+        VTSS_RC(vtss_phy_page_gpio(vtss_state, port_no));       // Switch to micro/GPIO register-page
+        VTSS_RC(PHY_WR_PAGE(vtss_state, port_no, VTSS_PHY_MICRO_PAGE, 0xd7dd));  // Set Address to Poke
+        VTSS_RC(vtss_phy_wait_for_micro_complete(vtss_state, port_no));
+
+        VTSS_RC(vtss_phy_page_gpio(vtss_state, port_no));       // Switch back to micro/GPIO register-page
+        VTSS_RC(PHY_WR_PAGE(vtss_state, port_no, VTSS_PHY_MICRO_PAGE, 0x8686));  // Poke to Reset PLL Startup State Machine, set disable_fsm:bit 118 for Atom12
+        VTSS_RC(vtss_phy_wait_for_micro_complete(vtss_state, port_no));
+
+
+        VTSS_RC(vtss_phy_page_gpio(vtss_state, port_no));       // Switch back to micro/GPIO register-page
+        VTSS_RC(PHY_WR_PAGE(vtss_state, port_no, VTSS_PHY_MICRO_PAGE, 0x80c0));  // Rewrite PLL Config Vector
+        VTSS_RC(vtss_phy_wait_for_micro_complete(vtss_state, port_no));
+
+        MEPA_MSLEEP(10); // 10msec sleep
+
+        VTSS_RC(vtss_phy_page_gpio(vtss_state, port_no));       // Switch back to micro/GPIO register-page
+        VTSS_RC(PHY_WR_PAGE(vtss_state, port_no, VTSS_PHY_MICRO_PAGE, 0x82d6));  // Poke to De-Assert Reset of PLL State Machine, clear disable_fsm:bit 118 Atom12
+        VTSS_RC(vtss_phy_wait_for_micro_complete(vtss_state, port_no));
+
+        VTSS_RC(vtss_phy_page_gpio(vtss_state, port_no));       // Switch back to micro/GPIO register-page
+        VTSS_RC(PHY_WR_PAGE(vtss_state, port_no, VTSS_PHY_MICRO_PAGE, 0x80c0));  // Rewrite PLL Config Vector
+        VTSS_RC(vtss_phy_wait_for_micro_complete(vtss_state, port_no));
+
+        MEPA_MSLEEP(10); // 10msec sleep
+
+        VTSS_RC(vtss_phy_page_ext3(vtss_state, port_no));
+        VTSS_RC(PHY_RD_PAGE(vtss_state, port_no, VTSS_PHY_MAC_SERDES_STATUS, &reg_val));
+
         break;
 
     case VTSS_PHY_FAMILY_TESLA:
@@ -15066,6 +15098,7 @@ static vtss_rc vtss_phy_reset_lcpll_private(vtss_state_t *vtss_state, vtss_port_
     }
 
     MEPA_MSLEEP(110); // 110msec sleep to allow re-calibration of LCPLL
+    VTSS_I("vtss_phy_pll5g_reset: Returning from LCPLL Reset private function, Port: %d", port_no);
 
     return (rc);
 }
