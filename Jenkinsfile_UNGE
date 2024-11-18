@@ -64,5 +64,22 @@ pipeline {
         }
 
     }
+    post {
+        success {
+            echo "Pipeline Success! Project: ${env.JOB_NAME}, Build Number: ${env.BUILD_NUMBER}"
+        }
+        unstable {
+            echo "Pipeline Unstable! Project: ${env.JOB_NAME}, Build Number: ${env.BUILD_NUMBER}"
+        }
+        aborted {
+            echo "Pipeline Aborted! Project: ${env.JOB_NAME}, Build Number: ${env.BUILD_NUMBER}"
+        }
+        failure {
+            echo "Pipeline Failure! Project: ${env.JOB_NAME}, Build Number: ${env.BUILD_NUMBER}"
+        }
+        always {
+            archiveArtifacts artifacts: 'images/*'
+        }
+    }
 }
 
