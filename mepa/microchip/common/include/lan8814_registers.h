@@ -25,6 +25,14 @@
 
 #define INDY_MMD_3      3
 #define INDY_MMD_7      7
+
+// Macros for Drivers and SKU's
+#define LAN8814_DEF_DRV_ID      0x221660 // default PHY ID stored in Reg 2 and 3
+#define LAN8814_INT_PHY_DRV_ID  0x221670 // PHY ID stored in Reg 2 and 3 for Internal PHY inside LAN9668
+
+#define LAN8814_SKU    0x8814
+#define LAN8804_SKU    0x8804
+
 // Direct registers
 
 // Register - 0
@@ -259,6 +267,9 @@
 
 // Register 8
 #define INDY_CHIP_HARD_RESET INDY_EXT_PAGE_4, 8
+
+// Register 11
+#define INDY_SKU_ID INDY_EXT_PAGE_4, 11
 
 // Register 32
 #define INDY_GPIO_EN1   INDY_EXT_PAGE_4, 32

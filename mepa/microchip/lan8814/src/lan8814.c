@@ -1213,13 +1213,24 @@ static mepa_rc indy_info_get(mepa_device_t *dev, mepa_phy_info_t *const phy_info
     phy_data_t *base_data = data->base_dev ? ((phy_data_t *)(data->base_dev->data)) : NULL;
 
     phy_info->cap = 0;
-    phy_info->part_number = 8814;
+    // Read SKU ID and assign Part no
+    if (dev->drv->id == LAN8814_DEF_DRV_ID || dev->drv->id == LAN8814_INT_PHY_DRV_ID) {
+        // For LAN8814 inside lan9668 the driver id is different and the SKU No is 0 upon read.
+	// Assigning part No based on Driver
+        phy_info->part_number = 8814;
+    } else if (dev->drv->id == LAN8804_SKU) {
+        phy_info->part_number = 8804;
+    }
     phy_info->revision = data->dev.rev;
     phy_info->cap |= (data->dev.model == 0x26) ? MEPA_CAP_TS_MASK_GEN_3 : MEPA_CAP_TS_MASK_NONE;
     phy_info->cap |= MEPA_CAP_SPEED_MASK_1G;
-    phy_info->ts_base_port = base_data ? base_data->port_no : 0;
-    phy_info->ts_base = data->base_dev;
-
+    if (dev->drv->id == LAN8804_SKU) {
+        phy_info->ts_base_port = 0;
+        phy_info->ts_base = 0;
+    } else {
+        phy_info->ts_base_port = base_data ? base_data->port_no : 0;
+        phy_info->ts_base = data->base_dev;
+    }
     return MEPA_RC_OK;
 }
 
@@ -1231,9 +1242,32 @@ static mepa_device_t *indy_probe(mepa_driver_t *drv,
     mepa_device_t *dev;
     phy_data_t *data;
 
+    // MEPA:692 A remapping of driver workaround for correctly identifying the LAN8814 SKU's
+    mepa_drivers_t lan8814_drv = mepa_lan8814_driver_init();
+    uint16_t sku = 0;
+    if (callout->miim_read && callout->miim_write) {
+        // Write Reg 22 as 4 to access EP4 registers space
+        callout->miim_write(callout_ctx, INDY_EXT_PAGE_ACCESS_CTRL, 4);
+        // Write Reg 23 as 11 to read reg 11 in EP4
+        callout->miim_write(callout_ctx, INDY_EXT_PAGE_ACCESS_ADDR_DATA, 11);
+        // Initiate Data read operation
+        callout->miim_write(callout_ctx, INDY_EXT_PAGE_ACCESS_CTRL, 0x4004);
+        // Read Reg 23 for SKU value read in EP 4.11
+        callout->miim_read(callout_ctx, INDY_EXT_PAGE_ACCESS_ADDR_DATA, &sku);
+    } else {
+        T_E(MEPA_TRACE_GRP_GEN, "callout read/write is not present for port:%d", board_conf->numeric_handle);
+        return 0;
+    }
+
+    if (sku == LAN8804_SKU) {
+        drv = &lan8814_drv.phy_drv[1];
+    }
+    // MEPA:692 Workaround ends
+
     dev = mepa_create_int(drv, callout, callout_ctx, board_conf, sizeof(phy_data_t));
     if (!dev) {
-        return 0;
+        T_E(MEPA_TRACE_GRP_GEN, "Dev creation failed for Port %d", board_conf->numeric_handle);
+        return NULL;
     }
 
     data = dev->data;
@@ -2404,7 +2438,7 @@ static mepa_rc indy_debug_info_dump(struct mepa_device *dev,
                                     const mepa_debug_info_t   *const info)
 {
     mepa_rc rc = MEPA_RC_OK;
-    mepa_phy_info_t phy_info;
+    mepa_phy_info_t phy_info = {};
     mepa_port_interface_t mac_if;
 
     (void)indy_info_get(dev, &phy_info);
@@ -2435,7 +2469,9 @@ static mepa_rc indy_debug_info_dump(struct mepa_device *dev,
     }
 
     //PHY_TS Debugging
-    indy_ts_debug_info_dump(dev, pr, info);
+    if (!(dev->drv->id == LAN8804_SKU)) { // not applicable to LAN8804
+        indy_ts_debug_info_dump(dev, pr, info);
+    }
 
     return rc;
 }
@@ -2444,10 +2480,10 @@ static mepa_rc indy_debug_info_dump(struct mepa_device *dev,
 
 mepa_drivers_t mepa_lan8814_driver_init()
 {
-    static const int nr_indy_drivers = 2;
+    static const int nr_indy_drivers = 3;
     static mepa_driver_t indy_drivers[] = {
         {
-            .id = 0x221660,  // LAN8814 QSGMII standalone PHY
+            .id = LAN8814_DEF_DRV_ID,  // LAN8814 QSGMII standalone PHY
             .mask = 0xfffff0,
             .mepa_driver_delete = indy_delete,
             .mepa_driver_reset = lan8814_reset,
@@ -2496,7 +2532,54 @@ mepa_drivers_t mepa_lan8814_driver_init()
 #endif //!defined MEPA_LAN8814_LIGHT
         },
         {
-            .id = 0x221670,  // Single PHY based on LAN8814 instantiated in LAN966x
+            .id = LAN8804_SKU,  // Quad PHY without 1588
+            .mask = 0xffff,
+            .mepa_driver_delete = indy_delete,
+            .mepa_driver_reset = lan8814_reset,
+            .mepa_driver_poll = indy_poll,
+            .mepa_driver_conf_set = indy_conf_set,
+            .mepa_driver_conf_get = indy_conf_get,
+            .mepa_driver_if_set = indy_if_set,
+            .mepa_driver_if_get = indy_if_get,
+            .mepa_driver_probe = indy_probe,
+            .mepa_driver_aneg_status_get = indy_aneg_status_get,
+            .mepa_driver_clause22_read = indy_direct_reg_read,
+            .mepa_driver_clause22_write = indy_direct_reg_write,
+            .mepa_driver_clause45_read  = indy_ext_mmd_reg_read,
+            .mepa_driver_clause45_write = indy_ext_mmd_reg_write,
+            .mepa_driver_event_enable_set = indy_event_enable_set,
+            .mepa_driver_event_enable_get = indy_event_enable_get,
+            .mepa_driver_event_poll = indy_event_status_poll,
+            .mepa_driver_gpio_mode_set = indy_gpio_mode_set,
+            .mepa_driver_gpio_out_set = indy_gpio_out_set,
+            .mepa_driver_gpio_in_get = indy_gpio_in_get,
+            .mepa_driver_link_base_port = indy_link_base_port,
+            .mepa_driver_phy_info_get = indy_info_get,
+            .mepa_driver_eee_mode_conf_set = indy_eee_mode_conf_set,
+            .mepa_driver_eee_mode_conf_get = indy_eee_mode_conf_get,
+            .mepa_driver_eee_status_get = indy_eee_status_get,
+#if !defined MEPA_LAN8814_LIGHT
+            .mepa_driver_cable_diag_start = indy_cab_diag_start,
+            .mepa_driver_cable_diag_get = indy_cab_diag_get,
+            .mepa_driver_loopback_set = indy_loopback_set,
+            .mepa_driver_loopback_get = indy_loopback_get,
+            .mepa_driver_synce_clock_conf_set = indy_recovered_clk_set,
+            .mepa_driver_isolate_mode_conf = indy_isolate_mode_conf,
+            .mepa_debug_info_dump = indy_debug_info_dump,
+            .mepa_driver_sqi_read = indy_sqi_read,
+            .mepa_driver_start_of_frame_conf_set = indy_start_of_frame_conf_set,
+            .mepa_driver_start_of_frame_conf_get = indy_start_of_frame_conf_get,
+            .mepa_driver_framepreempt_get = indy_framepreempt_get,
+            .mepa_driver_selftest_start = indy_selftest_start,
+            .mepa_driver_selftest_read = indy_selftest_read,
+            .mepa_driver_prbs_set = indy_prbs_set,
+            .mepa_driver_prbs_get = indy_prbs_get,
+            .mepa_driver_prbs_monitor_set = indy_prbs_monitor_set,
+            .mepa_driver_prbs_monitor_get = indy_prbs_monitor_get,
+#endif //!defined MEPA_LAN8814_LIGHT
+        },
+        {
+            .id = LAN8814_INT_PHY_DRV_ID,  // Single PHY based on LAN8814 instantiated in LAN966x
             .mask = 0xfffff0,
             .mepa_driver_delete = indy_delete,
             .mepa_driver_reset = lan8814_reset,
