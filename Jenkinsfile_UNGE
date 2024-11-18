@@ -26,7 +26,7 @@ pipeline {
     stages {
         stage("git checkout") {
             steps {
-                container('pod-mesa-base') {
+                container('pod-mepa-base') {
                     checkout([
                              $class: 'GitSCM',
                              branches: scm.branches,
@@ -51,7 +51,7 @@ pipeline {
                 stage("arm64") {
                     agent { kubernetes { yamlFile '.cmake/pod-build.yaml' } }
                     steps {
-                        container('pod-mesa-build') {
+                        container('pod-mepa-build') {
                             unstash name: "src"
                                     sh "tar -xf ws.tar && rm ws.tar"
                                     sh "./.cmake/create_cmake_project_new.rb -vfnp arm64 arm64"
