@@ -320,7 +320,7 @@ def process_adoc dir, base, ext, content
 
         # Members in structures
         when /^(mepa_\w+)::(\w+)$/, /^(mepa_\w+)::(\w+)\([^\)]*\)$/, 
-             /^(lan8814_\w+)::(\w+)$/,/^(lan8814_\w+)::(\w+)\([^\)]*\)$/
+             /^(lan8814_\w+)::(\w+)$/,/^(lan8814_\w+)::(\w+)\([^\)]*\)$/,
              /^(mscc_phy_\w+)::(\w+)$/, /^(mscc_phy_\w+)::(\w+)\([^\)]*\)$/, 
             sym_name = "#{$1}::#{$2}"
             idx = $1.size + 2
