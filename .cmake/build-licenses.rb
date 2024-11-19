@@ -1,8 +1,17 @@
+#!/usr/bin/env ruby
+
 # Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
 # SPDX-License-Identifier: MIT
 
-require_relative './release_utils.rb'           # For installing licenses.rb locally
-require "#{MSCC_RELEASE_UTILS_DIR}/licenses.rb" # Load the classes defined by that file.
+require 'yaml'
+require 'optparse'
+require_relative './licenses_lib.rb'
+
+$top = File.dirname(File.dirname(File.expand_path(__FILE__)))
+Dir.chdir($top)
+
+$yaml = YAML.load_file("#{$top}/.cmake/release.yaml")
+
 
 def licenses(top, output_file = nil, prv_release = nil, cur_release = nil)
     api_licenses = CLicenseModuleInfo.new(top, "MEPA")
@@ -82,7 +91,4 @@ def licenses_bin(top, arch, output_file = nil, bsp = nil, tc = nil, cur_release 
     end
 end
 
-# Trial run:
-# Uncomment the next line, cd to top-of-MEPA-repo, ruby ./.cmake/licenses.rb
-# licenses(".")
-
+licenses("ws", "ws/LICENSE", $yaml['conf']['friendly_name_prv'], $yaml['conf']['friendly_name_cur'])

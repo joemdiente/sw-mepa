@@ -59,7 +59,7 @@ if ENV['BRANCH_NAME']
 else
     git_branch = %x(git symbolic-ref --short -q HEAD).chop
 end
-out_name = "mesa-#{git_id}@#{git_branch}"
+out_name = "mepa-#{git_id}@#{git_branch}"
 
 ## TODO, check to see if clean
 
@@ -70,9 +70,9 @@ end
 run "mkdir -p #{$ws}"
 run "git archive --format=tar HEAD | tar -C #{$ws} -x"
 File.open("#{$ws}/.mscc-version", 'w') do |version|
-    version.puts(%Q(mesa_sha="#{git_sha}"))
-    version.puts(%Q(mesa_id="#{git_id}"))
-    version.puts(%Q(mesa_branch="#{git_branch}"))
+    version.puts(%Q(mepa_sha="#{git_sha}"))
+    version.puts(%Q(mepa_id="#{git_id}"))
+    version.puts(%Q(mepa_branch="#{git_branch}"))
 end
 
 run "rm -rf #{$ws}/.cmake/release*"
@@ -83,4 +83,3 @@ run "rm -rf #{$ws}/mesa/demo/test"
 run "rm -rf #{$ws}/Jenkinsfile"
 run "rm -rf #{$ws}/Jenkinsfile_UNGE"
 run "tar --format=posix --numeric-owner --owner=0 --group=0 --mtime=@0 -c -f #{$ws}.tar -C #{$ws} ."
-

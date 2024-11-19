@@ -52,7 +52,7 @@ pages:
 
     - name: "MEPA API Reference"
       pages:
-        - src:  "sw-mesa/me/include/microchip/ethernet/common.h"
+        - src:  "me/include/microchip/ethernet/common.h"
         - src:  "mepa/include/microchip/ethernet/phy/api/phy_ts.h"
         - src:  "mepa/include/microchip/ethernet/phy/api/phy_macsec.h"
         - src:  "mepa/include/microchip/ethernet/phy/api/types.h"

@@ -324,7 +324,7 @@ if $opt[:build]
     run "mkdir tmp-ws-packing"
     run "cp -r #{out} tmp-ws-packing/#{$opt[:pack]}"
     cd "tmp-ws-packing/#{$opt[:pack]}"
-    clean(Pathname.new("."), c[:package_list])
+    #clean(Pathname.new("."), c[:package_list])
     cd $top
 
     run "tar --format=posix --numeric-owner --owner=0 --group=0 --mtime=@0 -c -f #{$opt[:pack]}.tar -C tmp-ws-packing #{$opt[:pack]}"

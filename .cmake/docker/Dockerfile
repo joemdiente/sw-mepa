@@ -48,9 +48,9 @@ RUN apt-get install -y \
     sudo \
     zlib1g-dev
 
-RUN gem install nokogiri -v '1.15.3' --source 'https://rubygems.org/' \
+RUN gem install nokogiri -v '1.10.8' --source 'https://rubygems.org/' \
  && gem install asciidoctor -v '2.0.8' --source 'https://rubygems.org/' \
- && gem install mini_portile2 -v '2.8.2' --source 'https://rubygems.org/' \
+ && gem install mini_portile2 -v '2.4.0' --source 'https://rubygems.org/' \
  && gem install json_schemer -v '2.3.0' --source 'https://rubygems.org/' \
  && gem install hexdump packetfu ox
 
