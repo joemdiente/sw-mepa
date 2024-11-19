@@ -167,7 +167,7 @@ typedef struct {
     mepa_phy_prbs_generator_conf_t prbs_conf;
     mepa_bool_t              prbs_init;
     mepa_phy_eee_conf_t      eee_conf;
-    indy_phy_downshift_t     dsh_conf; //Auto downshift configuration(chip specific)
+    lan8814_phy_downshift_t  dsh_conf; //Auto downshift configuration(chip specific)
     uint8_t                  loop_cnt; //variable to denote no of times status poll getting called by application when MEPA 555 or MEPA 546 occurs.
     uint8_t                  rep_cnt; //Rate at which application polls a port per sec, for ex: rep_cnt = 10 means 10 times polling will be called per port per sec.
     mepa_bool_t              dsh_complete; //flag to denote downshift operation completed.
