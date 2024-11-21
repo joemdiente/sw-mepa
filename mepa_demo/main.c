@@ -27,6 +27,10 @@
 
 #define I2C_PORT2DEV(p) (100 + p)
 
+#define EDSX_PORT_CNT_9 9
+#define EDSX_SLOT1_START_PORT_CNT_9 0
+#define EDSX_SLOT2_START_PORT_CNT_9 4
+
 // Local data
 static int LOOP_PORT = -1;
 static int REF_BOARD_PCB = -1;
@@ -1080,10 +1084,26 @@ mesa_rc mepa_spi_reg_read_write (void *chip,
                                  mepa_bool_t           read,
                                  uint8_t             dev,
                                  uint16_t            reg_num,
-                                 uint32_t            *const data){
+                                 uint32_t            *const data)
+{
     uint32_t addr = 0, ch_no = 0;
-    if((port_no >= EDSX_25G_SLOT1_START && port_no <= EDSX_25G_SLOT1_END) ) {
-        ch_no = (port_no == 0)?0:(EDSX_25G_SLOT1_END - port_no);
+    uint32_t slot1_start = EDSX_25G_SLOT1_START;
+    uint32_t slot1_end = EDSX_25G_SLOT1_END;
+    uint32_t slot2_start = EDSX_25G_SLOT2_START;
+    uint32_t slot2_end = EDSX_25G_SLOT2_END;
+
+    uint32_t port_cnt = MEBA_WRAP(meba_capability, appl_init.board_inst, MEBA_CAP_BOARD_PORT_MAP_COUNT);
+
+    /* SFP Slots Port Numbers when EDSX Port Count is 9 */
+    if(port_cnt == EDSX_PORT_CNT_9) {
+        slot1_start = EDSX_SLOT1_START_PORT_CNT_9;
+        slot1_end = EDSX_SLOT1_START_PORT_CNT_9 + 4;
+        slot2_start =  EDSX_SLOT2_START_PORT_CNT_9;
+        slot2_end = EDSX_SLOT2_START_PORT_CNT_9 + 4;
+    }
+ 
+    if((port_no >= slot1_start && port_no <= slot1_end) ) {
+        ch_no = (port_no == 0)?0:(slot1_end - port_no);
         if(read){
             addr = ch_no << 21 | dev << 16 | reg_num;
             spi_read(SPI_USER_REG, addr, data);
@@ -1094,8 +1114,8 @@ mesa_rc mepa_spi_reg_read_write (void *chip,
             spi_write(SPI_USER_REG, addr, *data); 
         }
     }
-    if((port_no >= EDSX_25G_SLOT2_START && port_no <= EDSX_25G_SLOT2_END)) {
-        ch_no = (port_no == 0)?0:(EDSX_25G_SLOT2_END - port_no);
+    if((port_no >= slot2_start && port_no <= slot2_end)) {
+        ch_no = (port_no == 0)?0:(slot2_end - port_no);
         if(read){
             addr = ch_no << 21 | dev << 16 | reg_num;
             spi_read(SPI_USER_FPGA, addr, data);
@@ -1192,16 +1212,6 @@ int main(int argc, char **argv)
     
     rc = spi_io_init(SPI_USER_REG, "/dev/spidev0.1",SPI_FREQ, SPI_PAD);
     rc = spi_io_init(SPI_USER_FPGA, "/dev/spidev0.2", SPI_FREQ, SPI_PAD);
-    if (SPI_REG_IO_SLOT1) {
-        board_info.mepa_spi_slot1_reg_read = mepa_phy_spi_read;
-        board_info.mepa_spi_slot1_reg_write = mepa_phy_spi_write;
-    }
-#if 0
-    if (SPI_REG_IO_SLOT2) {
-        board_info.mepa_spi_slot2_reg_read = mepa_spi2_spi_read;
-        board_info.mepa_spi_slot2_reg_write = mepa_spi2_spi_write;
-    }
-#endif
     {
         rc = uio_reg_io_init();
         reg_read = uio_reg_read;
@@ -1248,6 +1258,17 @@ int main(int argc, char **argv)
         return 1;
     }
     T_D("API Instantiated");
+
+    if (SPI_REG_IO_SLOT1) {
+        init->board_inst->iface.mepa_spi_slot1_reg_read = mepa_phy_spi_read;
+        init->board_inst->iface.mepa_spi_slot1_reg_write = mepa_phy_spi_write;
+    }
+    if (SPI_REG_IO_SLOT2) {
+        init->board_inst->iface.mepa_spi_slot2_reg_read = mepa_phy_spi_read;
+        init->board_inst->iface.mepa_spi_slot2_reg_write = mepa_phy_spi_write;
+    }
+
+
 
     // Initialize API instance
     if (mesa_init_conf_get(NULL, &conf) != MESA_RC_OK) {

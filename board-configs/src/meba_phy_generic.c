@@ -63,7 +63,7 @@ void mem_free(struct mepa_callout_ctx *ctx, void *ptr)
     free(ptr);
 }
 
-static void meba_phy_config(meba_inst_t inst, const vtss_inst_t vtss_instance, mepa_port_no_t port_no) {
+static void meba_phy_config(meba_inst_t inst, const vtss_inst_t vtss_instance, mepa_port_no_t port_no, mepa_port_no_t base_port_no) {
     mepa_phy_info_t phy_info = {};
     mepa_reset_param_t phy_reset = {};
 
@@ -77,10 +77,7 @@ static void meba_phy_config(meba_inst_t inst, const vtss_inst_t vtss_instance, m
 
     /* Port Configuration */
     if(phy_info.part_number == 0x8258) {
-        if(port_no > 11 && port_no < 16)
-            m10g_mode_conf(vtss_instance, inst, port_no, 12);
-         if(port_no > 15 && port_no < 20)
-            m10g_mode_conf(vtss_instance, inst, port_no, 16);
+        m10g_mode_conf(vtss_instance, inst, port_no, base_port_no);
     }
 } 
 
@@ -99,7 +96,7 @@ uint16_t slot2_map[] = {0x1f, 0x1e, 0x1d, 0x1c};
   identify the PHY and configure the default configs.
   if eeprom is available read via i2c-3 and configure based on the hardware
   details */
-void phy_25g_slot1_scan(meba_inst_t inst, mepa_port_no_t port_no, meba_port_entry_t *entry) {
+void phy_25g_slot1_scan(meba_inst_t inst, mepa_port_no_t port_no, meba_port_entry_t *entry, mepa_port_no_t base_port) {
     /* seperate API support needed for slot 2 SPI as of now only spi1 taken */
     uint32_t phy_id = 0; 
     uint32_t model= 0;
@@ -116,7 +113,7 @@ void phy_25g_slot1_scan(meba_inst_t inst, mepa_port_no_t port_no, meba_port_entr
         entry->mac_if              = MESA_PORT_INTERFACE_SFI;
         entry->map.miim_controller = MESA_MIIM_CONTROLLER_0;
         entry->cap = (MEBA_PORT_CAP_VTSS_10G_PHY | MEBA_PORT_CAP_10G_FDX | MEBA_PORT_CAP_FLOW_CTRL | MEBA_PORT_CAP_1G_FDX);
-        entry->phy_base_port       = 12;
+        entry->phy_base_port       = base_port;
     } 
     else {
         mesa_miim_read(0, entry->map.chip_no, 0, slot1_map_viper[port_no - 12], 2, &reg2);
@@ -130,7 +127,7 @@ void phy_25g_slot1_scan(meba_inst_t inst, mepa_port_no_t port_no, meba_port_entr
                                     MEBA_PORT_CAP_DUAL_FIBER_1000X | MEBA_PORT_CAP_10M_HDX | MEBA_PORT_CAP_10M_FDX |
                                     MEBA_PORT_CAP_100M_HDX | MEBA_PORT_CAP_100M_FDX );
             entry->map.miim_addr       =  slot1_map_viper[port_no - 12];
-            entry->phy_base_port       = 12;
+            entry->phy_base_port       = base_port;
         }
     }
 
@@ -138,7 +135,7 @@ void phy_25g_slot1_scan(meba_inst_t inst, mepa_port_no_t port_no, meba_port_entr
  
 }
 
-void phy_25g_slot2_scan(meba_inst_t inst, mepa_port_no_t port_no, meba_port_entry_t *entry) {
+void phy_25g_slot2_scan(meba_inst_t inst, mepa_port_no_t port_no, meba_port_entry_t *entry, mepa_port_no_t base_port) {
     /* seperate API support needed for slot 2 SPI as of now only spi1 taken */
     uint32_t phy_id = 0;
     if(inst->iface.mepa_spi_slot2_reg_read != NULL) {
@@ -152,7 +149,7 @@ void phy_25g_slot2_scan(meba_inst_t inst, mepa_port_no_t port_no, meba_port_entr
         entry->mac_if              = MESA_PORT_INTERFACE_SFI;
         entry->map.miim_controller = MESA_MIIM_CONTROLLER_0;
         entry->cap = (MEBA_PORT_CAP_VTSS_10G_PHY | MEBA_PORT_CAP_10G_FDX | MEBA_PORT_CAP_FLOW_CTRL | MEBA_PORT_CAP_1G_FDX);
-        entry->phy_base_port = 16;
+        entry->phy_base_port = base_port;
     }
     T_I(inst, "port(%d):  %x\n",port_no, phy_id & 0xFFFF);
 
@@ -180,6 +177,7 @@ void meba_phy_driver_init(meba_inst_t inst)
     mesa_port_no_t      port_no;
     meba_port_entry_t   entry;
     mepa_device_t       *phy_dev;
+    mepa_port_no_t      base_port_no = 0;
 
     inst->phy_device_ctx = calloc(inst->phy_device_cnt, sizeof(mepa_callout_ctx_t));
     inst->spi_mepa_callout = calloc(inst->phy_device_cnt, sizeof(mepa_callout_t));
@@ -240,7 +238,6 @@ void meba_phy_driver_init(meba_inst_t inst)
             }
         }
     }
-
     // Enable accessing the shared resources by linking the base port on each port
     for (port_no = 0; port_no < inst->phy_device_cnt; port_no++) {
         inst->api.meba_port_entry_get(inst, port_no, &entry);
@@ -249,10 +246,10 @@ void meba_phy_driver_init(meba_inst_t inst)
             (void)mepa_link_base_port(phy_dev,
                                       inst->phy_devices[entry.phy_base_port],
                                       entry.map.chip_port);
+
+            base_port_no = entry.phy_base_port;
         }
-        if(port_no > 11 && port_no < 20) {
-            meba_phy_config(inst, vtss_instance, port_no);
-        }
+        meba_phy_config(inst, vtss_instance, port_no, base_port_no);
     }
 
 }

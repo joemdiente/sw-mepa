@@ -148,6 +148,44 @@ static const fa_malibu_gpio_port_map_t malibu_gpio_map[] = {
 };
 #endif
 
+/* EDSx SFP Slot Port Mapping table */
+static edsx_slot_port_t slot_map[] = {
+   [VTSS_BOARD_CONF_20x10G_NPI] = {
+        .sfp_slot1_port = 12,
+        .sfp_slot2_port = 16,
+   },
+
+   [VTSS_BOARD_CONF_8x25G_NPI] = {
+        .sfp_slot1_port = 0,
+        .sfp_slot2_port = 4,
+   },
+
+   [VTSS_BOARD_CONF_6x10G_NPI] = {
+        .sfp_slot1_port = -1,
+        .sfp_slot2_port = -1,
+   },
+
+   [VTSS_BOARD_CONF_9x10G_NPI] = {
+        .sfp_slot1_port = -1,
+        .sfp_slot2_port = -1,
+   },
+   
+   [VTSS_BOARD_CONF_16x10G_NPI] = {
+        .sfp_slot1_port = 12,
+        .sfp_slot2_port = -1,
+   },
+
+   [VTSS_BOARD_CONF_12x10G_NPI] = {
+        .sfp_slot1_port = -1,
+        .sfp_slot2_port = -1,
+   },
+
+   [VTSS_BOARD_CONF_10x10G_4x25G_NPI] = {
+        .sfp_slot1_port = -1,
+        .sfp_slot2_port = -1,
+   },
+};
+
 meba_inst_t lan969x_initialize(meba_inst_t inst, const meba_board_interface_t *callouts);
 
 static const meba_aux_rawio_t rawio = {
@@ -1469,11 +1507,14 @@ static mesa_rc fa_gpio_func_info_get(meba_inst_t inst,
     }
     return rc;
 }
+
 static mesa_rc fa_reset(meba_inst_t inst, meba_reset_point_t reset)
 {
     meba_board_state_t *board = INST2BOARD(inst);
     mesa_rc rc = MESA_RC_OK;
     mesa_sgpio_conf_t  conf;
+    int start_port_slot1;
+    int start_port_slot2;
 
     T_D(inst, "Called - %d", reset);
     switch (reset) {
@@ -1484,10 +1525,16 @@ static mesa_rc fa_reset(meba_inst_t inst, meba_reset_point_t reset)
             mdio_conf.miim_freq = MIIM_FREQ_CONTROLLER_0;
             mesa_mdio_conf_set(NULL, MESA_MIIM_CONTROLLER_0, &mdio_conf);
 
-            for(int port = 12; port < 16; port++) /* slot 1 scanning */
-                phy_25g_slot1_scan(inst, port, &board->port[port].map);
-            for(int port = 16; port < 20; port++) /* slot 2 scanning */
-                phy_25g_slot2_scan(inst, port, &board->port[port].map);
+            start_port_slot1 = slot_map[board->port_cfg].sfp_slot1_port;
+	    start_port_slot2 = slot_map[board->port_cfg].sfp_slot2_port;
+
+            if(slot_map[board->port_cfg].sfp_slot1_port >= 0) {
+                for(int port = start_port_slot1; port < (start_port_slot1 + 4); port++) /* slot 1 scanning */
+                    phy_25g_slot1_scan(inst, board->port[port].board_port, &board->port[port].map, start_port_slot1);
+            } if(slot_map[board->port_cfg].sfp_slot2_port >= 0) {
+                for(int port = start_port_slot2; port < (start_port_slot2 + 4); port++) /* slot 2 scanning */
+                    phy_25g_slot2_scan(inst, board->port[port].board_port, &board->port[port].map, start_port_slot2);
+            }
             break;
 
         case MEBA_PORT_RESET:
@@ -1630,13 +1677,17 @@ static mesa_rc fa_reset(meba_inst_t inst, meba_reset_point_t reset)
             meba_phy_driver_init(inst);
             break;
         case MEBA_ENTRY_PHY_SET:
-            for(int port = 12; port < 16; port++){ /* slot 1 scanning */
-                phy_25g_slot1_scan(inst, port, &board->port[port].map);
-                //printf("%d\n",board->port[port].map.map.miim_addr);
+            start_port_slot1 = slot_map[board->port_cfg].sfp_slot1_port;
+            start_port_slot2 = slot_map[board->port_cfg].sfp_slot2_port;
+
+            if(slot_map[board->port_cfg].sfp_slot1_port >= 0) {
+                for(int port = start_port_slot1; port < (start_port_slot1 + 4); port++) /* slot 1 scanning */
+                    phy_25g_slot1_scan(inst, board->port[port].board_port, &board->port[port].map, start_port_slot1);
+            } if(slot_map[board->port_cfg].sfp_slot2_port >= 0) {
+                for(int port = start_port_slot2; port < (start_port_slot2 + 4); port++) /* slot 2 scanning */
+                    phy_25g_slot2_scan(inst, board->port[port].board_port, &board->port[port].map, start_port_slot2);
             }
-            for(int port = 16; port < 20; port++) /* slot 2 scanning */
-                phy_25g_slot2_scan(inst, port, &board->port[port].map);
-            break; 
+            break;
     }
     T_D(inst, "Called - %d - Done", reset);
     return rc;
