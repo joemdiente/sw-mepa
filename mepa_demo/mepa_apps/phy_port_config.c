@@ -280,7 +280,7 @@ static void cli_cmd_fpp_set(cli_req_t *req)
         T_E("\n Error in Detecting PHY Family on Port %d\n", req->port_no);
         return;
     }
-    if((phy_family.family != PHY_FAMILY_INDY) && (phy_family.family != PHY_FAMILY_MALIBU_25G)) {
+    if((phy_family.family != PHY_FAMILY_LAN8814) && (phy_family.family != PHY_FAMILY_MALIBU_25G)) {
         T_E("\n PHY on Port :%d doesn't support Frame Preemption\n", req->port_no);
         return;
     }
@@ -305,7 +305,7 @@ static void cli_cmd_fpp_get(cli_req_t *req)
         T_E("\n Error in Detecting PHY Family on Port %d\n", req->port_no);
         return;
     }
-    if((phy_family.family != PHY_FAMILY_INDY) && (phy_family.family != PHY_FAMILY_MALIBU_25G)) {
+    if((phy_family.family != PHY_FAMILY_LAN8814) && (phy_family.family != PHY_FAMILY_MALIBU_25G)) {
         T_E("\n PHY on Port :%d doesn't support Frame Preemption\n", req->port_no);
         return;
     }
@@ -394,8 +394,8 @@ static int cli_parm_keyword(cli_req_t *req)
 static cli_parm_t cli_parm_table[] = {
     {
         "qsgmii|sfi|sgmii",
-        "QSGMII      :  Quad serial gigabit media-independent interface (supports viper, indy) \n"
-        "SGMII       :  Serial gigabit media-independent interface (supports viper, indy)\n"
+        "QSGMII      :  Quad serial gigabit media-independent interface (supports viper, LAN8814) \n"
+        "SGMII       :  Serial gigabit media-independent interface (supports viper, LAN8814)\n"
         "SFI         :  SerDes Framer Interface (supports Malibu)\n",
         CLI_PARM_FLAG_NO_TXT | CLI_PARM_FLAG_SET,
         cli_parm_keyword
@@ -403,7 +403,7 @@ static cli_parm_t cli_parm_table[] = {
 
     {
         "1g_conf|10g_conf",
-        "1g_conf      :  1g configuration for the PHY (supports viper, indy...) \n"
+        "1g_conf      :  1g configuration for the PHY (supports viper, LAN8814...) \n"
         "10g_conf       :  10g configuration for the PHY (support malibu, venice..)\n",
         CLI_PARM_FLAG_NO_TXT | CLI_PARM_FLAG_SET,
         cli_parm_keyword

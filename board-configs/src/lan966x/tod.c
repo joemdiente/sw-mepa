@@ -13,7 +13,7 @@ mesa_rc meba_tod_phy_ts_clk_info(meba_inst_t inst,
                                  mepa_timeinterval_t *pps_load_delay,
                                  mepa_timeinterval_t *pps_save_delay)
 {
-    // Indy phy config.
+    // LAN8814 phy config.
     *freq = MEPA_TS_CLOCK_FREQ_250M;
     *src = MEPA_TS_CLOCK_SRC_125MHZ_QSGMII_REC_CLOCK;
     T_I(inst, "Maserati board 250Mhz 1pps latency of 2 clk cycles");

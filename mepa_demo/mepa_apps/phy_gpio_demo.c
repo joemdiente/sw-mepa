@@ -40,9 +40,9 @@ static int phy_gpio_no_for_alternate_function(phy_family_t family, int alt_fun, 
     if(family == PHY_FAMILY_VIPER) {
         memcpy(gpio_table, &viper[alt_fun], sizeof(gpio_table_t));
         return viper[alt_fun].gpio_no;
-    } if(family == PHY_FAMILY_INDY) {
-        memcpy(gpio_table, &indy[alt_fun], sizeof(gpio_table_t));
-        return indy[alt_fun].gpio_no;
+    } if(family == PHY_FAMILY_LAN8814) {
+        memcpy(gpio_table, &lan8814[alt_fun], sizeof(gpio_table_t));
+        return lan8814[alt_fun].gpio_no;
     }
     return 0;
 }
@@ -67,7 +67,7 @@ static void cli_cmd_gpio_conf(cli_req_t *req)
         return;
     }
     T_I("\n Detected PHY Family on port %d is : %d\n", req->port_no, phy_family.family);
-    if((phy_family.family == PHY_FAMILY_VIPER) || (phy_family.family == PHY_FAMILY_TESLA) || (phy_family.family == PHY_FAMILY_INDY)) {
+    if((phy_family.family == PHY_FAMILY_VIPER) || (phy_family.family == PHY_FAMILY_TESLA) || (phy_family.family == PHY_FAMILY_LAN8814)) {
         memset(&gpio_conf, 0, sizeof(mepa_gpio_conf_t));
         cli_printf("\n");
         cli_printf("\t 1 . Output Mode\n");
@@ -78,7 +78,7 @@ static void cli_cmd_gpio_conf(cli_req_t *req)
          * function of GPIO PIN, it has seperate Register for LED Configuration, provided
          * sperate Mode to configure LED in case of Viper and Tesla PHYs
          */
-        if(phy_family.family != PHY_FAMILY_INDY) {
+        if(phy_family.family != PHY_FAMILY_LAN8814) {
             cli_printf("\t 4 . LED Configuration\n");
             vsc_phy_connected = 1;
         }
@@ -127,7 +127,7 @@ static void cli_cmd_gpio_conf(cli_req_t *req)
                 cli_printf("\t 13. 1588 SPI DO\n");
                 max_alter_fun = MAX_SUPPORTED_ALT_FUN_VIPER;
                 break;
-            case PHY_FAMILY_INDY:
+            case PHY_FAMILY_LAN8814:
                 cli_printf("\t 0 . 1588 Event A\n");
                 cli_printf("\t 1 . 1588 Event B\n");
                 cli_printf("\t 2 . 1588 Ref Clk\n");
@@ -144,7 +144,7 @@ static void cli_cmd_gpio_conf(cli_req_t *req)
                 cli_printf("\t 13. SOF 2\n");
                 cli_printf("\t 14. SOF 3\n");
                 cli_printf("\t 15. Port LED Configuration\n");
-                max_alter_fun = MAX_SUPPORTED_ALT_FUN_INDY;
+                max_alter_fun = MAX_SUPPORTED_ALT_FUN_LAN8814;
                 break;
             default:
                 break;
@@ -159,7 +159,7 @@ static void cli_cmd_gpio_conf(cli_req_t *req)
             gpio_conf.gpio_no = phy_gpio_no_for_alternate_function(phy_family.family, alt_fun, &gpio_table);
             cli_printf("\n\t Selected %s Alternate Mode for GPIO %d PIN\n", gpio_table.desc, gpio_conf.gpio_no);
         }
-        /* In Case of INDY PHY, Port LED alternate function the GPIO Number is selected inside the API based
+        /* In Case of LAN8814 PHY, Port LED alternate function the GPIO Number is selected inside the API based
          * on the Channel id of the PHY */
         if(gpio_mode == 4 || (!vsc_phy_connected && (alt_fun == 15))) {
             cli_printf("\n");
@@ -203,7 +203,7 @@ static void cli_cmd_gpio_conf(cli_req_t *req)
 	    } 
             gpio_conf.mode = MEPA_GPIO_MODE_ALT + alt_mode; /* Alternate Mode Selected */
             cli_printf("\n");
-            if(phy_family.family != PHY_FAMILY_INDY) {
+            if(phy_family.family != PHY_FAMILY_LAN8814) {
                 cli_printf("\t Enter the LED needs to be configured [0 - LED0 or 1 - LED1] : ");
 	    } else {
                 cli_printf("\t Enter the LED needs to be configured [0 - LED1 or 1 - LED2] : ");

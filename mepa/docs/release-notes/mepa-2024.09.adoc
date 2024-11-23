@@ -52,7 +52,7 @@
   * MEPA-636: User Guide for SyncE Sample App on EDS X Platform.
   * MEPA-642: Port config sample application modification for 10g conf set and reset
   * MEPA-645: definition of T_E need to be change in vtss_private.h due to redefinition issue
-  * MEPA-704: CLONE - API Guide for Indy Chip Specific APIs
+  * MEPA-704: CLONE - API Guide for LAN8814 Chip Specific APIs
   * MEPA-711: Adding the Control Frame Configuration Support in MACsec Application for Malibu25G PHY and  Change the Ethertype and MAC address display from Decimal to Hexadecimal
 
 

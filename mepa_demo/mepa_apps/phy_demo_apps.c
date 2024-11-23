@@ -41,7 +41,7 @@ mepa_rc phy_family_detect(meba_inst_t meba_instance, mepa_port_no_t port_no, dem
         phy_info->family = PHY_FAMILY_TESLA;
         break;
     case PHY_TYPE_8814:
-        phy_info->family = PHY_FAMILY_INDY;
+        phy_info->family = PHY_FAMILY_LAN8814;
         break;
     default:
         cli_printf("\nPHY Connected is not supported in application\n");

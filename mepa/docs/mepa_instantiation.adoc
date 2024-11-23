@@ -71,7 +71,7 @@ The MEPA trace function is a single global variable. Traces will only work when
 a function is assigned to MEPA_TRACE_FUNCTION.
 
 For trace callback `mepa_trace_func_t`, application specific implementation
-must be passed to print the traces supported by API. For Indy, the trace flag
+must be passed to print the traces supported by API. For LAN8814, the trace flag
 `MEPA_TRACE_GRP_GEN` can be used to enable General PHY related traces. Each
 application may have its own conditions on when to enable traces. When the
 callback `mepa_trace_func_t` is executed, application can print or ignore the

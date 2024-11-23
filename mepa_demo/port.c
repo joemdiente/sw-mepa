@@ -1817,7 +1817,7 @@ static void port_init(meba_inst_t inst)
             break;
         case MESA_PORT_INTERFACE_SGMII_CISCO:
             if (cap & MEBA_PORT_CAP_COPPER) {
-                entry->media_type = MSCC_PORT_TYPE_CU; // Indy phys
+                entry->media_type = MSCC_PORT_TYPE_CU; // LAN8814 phys
             } else {
                 entry->media_type = MSCC_PORT_TYPE_SFP;
             }

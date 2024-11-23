@@ -19,12 +19,12 @@ mesa_rc meba_tod_phy_ts_clk_info(meba_inst_t inst,
 
     switch (board->type) {
     case BOARD_TYPE_LAGUNA_PCB8398:
-        T_I(inst, "PCB8398 board with Indy phy");
+        T_I(inst, "PCB8398 board with LAN8814 phy");
         *freq = MEPA_TS_CLOCK_FREQ_25M;
         *src = MEPA_TS_CLOCK_SRC_EXT_1588_REF_CLOCK;
         break;
     case BOARD_TYPE_SPARX5_PCB135:
-        T_I(inst, "PCB135 board with Indy phy");
+        T_I(inst, "PCB135 board with LAN8814 phy");
         *freq = MEPA_TS_CLOCK_FREQ_250M;
         *src = MEPA_TS_CLOCK_SRC_EXT_1588_REF_CLOCK;
         break;
