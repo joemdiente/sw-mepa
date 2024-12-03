@@ -1000,6 +1000,7 @@ static void init_modules(mscc_appl_init_t *init)
     mepa_demo_appl_macsec_demo(init);
     mepa_demo_appl_gpio_lp_demo(init);
     mscc_appl_phy_loopback_init(init);
+    mscc_appl_phy_diagnostics_demo(init);
 }
 
 typedef struct {

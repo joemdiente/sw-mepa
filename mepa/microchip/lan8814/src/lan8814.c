@@ -1578,6 +1578,14 @@ static mepa_rc lan8814_cab_diag_start(mepa_device_t *dev, int32_t mode)
         MEPA_EXIT(dev);
         return MEPA_RC_ERROR;
     }
+    /*Updated the res->link parameter of cable_diag result based upon the poll status */
+    RD(dev, LAN8814_BASIC_STATUS, &value);
+    res->link = (value & LAN8814_F_BASIC_STATUS_LINK_STATUS) ? 1 : 0;
+    /*If link is Up do not perform cable diagnostics operation just return */
+    if(res->link) {
+        MEPA_EXIT(dev);
+        return MEPA_RC_OK;
+    }
     lan8814_cab_diag_enter_config(dev);
     for (pair = 0; pair < 4; pair++) {
         // clear diag test ena before starting
@@ -1594,14 +1602,11 @@ static mepa_rc lan8814_cab_diag_start(mepa_device_t *dev, int32_t mode)
             if ((status == LAN8814_CABLE_OPEN) || (status == LAN8814_CABLE_SHORT)) {
                 res->status[pair] = (status == LAN8814_CABLE_SHORT) ? MEPA_CABLE_DIAG_STATUS_SHORT : MEPA_CABLE_DIAG_STATUS_OPEN;
                 res->length[pair] = 0.8 * MEPA_ABS((LAN8814_X_CABLE_DIAG_DATA(value) - 22));
-                res->link = TRUE;
                 T_I(MEPA_TRACE_GRP_GEN, "pair=%d status=%d length=%d\n", pair, res->status[pair], res->length[pair]);
             } else if (status == LAN8814_CABLE_FAIL) {
                 res->status[pair] = MEPA_CABLE_DIAG_STATUS_ABNORM;
-                res->link = FALSE;
                 T_I(MEPA_TRACE_GRP_GEN, "link status failed for pair %d \n", pair);
             } else { // status as LAN8814_CABLE_NORMAL
-                res->link = TRUE;
                 T_I(MEPA_TRACE_GRP_GEN, "pair=%d status=%d \n", pair, status);
             }
         }
