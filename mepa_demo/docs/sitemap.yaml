@@ -23,6 +23,7 @@ pages:
         - src: "mepa_demo/docs/synce-demo.adoc"
         - src: "mepa_demo/docs/gpio-demo.adoc"
         - src: "mepa_demo/docs/loopback-demo.adoc"
+        - src: "mepa_demo/docs/diagnostics-demo.adoc"
 
     - name: "MEPA App Reference"
       pages:

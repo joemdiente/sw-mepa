@@ -1,0 +1,52 @@
+// Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+// SPDX-License-Identifier: MIT
+
+= Diagnostics Demo Application
+
+Following are the diagnostic features supported by the Application for 1G PHYs:
+
+* `Cable Diagnostics` +
+
+== Directory
+* `./mepa_demo/mepa_apps/phy_diagnostics.c` - Source File for Diagnostics Sample Application
+
+== Diagnostics Application Features
+Following Sections describe the various features supported by this application.
+
+== Cable Diagnostics
+Cable diagnostic suite provides extensive network cable information such as
+link status, cable length, termination status and open/short fault location.
+
+----
+#mepa-cmd cable_diagnostics <port_no>
+----
+
+The above command is used to start the Cable Diagnostics and display the Cable diagnostics results for for the particular port of PHYDescriptions of various arguments in the command is listed below.
+
+* `port_no`       -- Port Number +
+
+
+Following Example shows the Cable Diagnostics of the Port for Open Fault case
+
+----
+#
+# mepa-cmd cable_diagnostics 1
+
+Cable Diagnostics started on Port : 0
+
+Cable Diagnostic Result on Port 0
+
+
+LINK     PAIR     STATUS     LENGTH 
+ 0       A        OPEN       123
+ 0       B        OPEN       120
+ 0       C        OPEN       124
+ 0       D        OPEN       120
+----
+When Link is Up here is the result of Cable Diagnostics for the Port 
+----
+# mepa-cmd cable_diagnostics 1
+
+Cable Diagnostics cannot be performed for the Port 0 when link is UP
+
+----
