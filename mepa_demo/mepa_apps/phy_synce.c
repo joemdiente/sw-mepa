@@ -118,7 +118,7 @@ static void cli_cmd_synce_conf_set(cli_req_t *req)
 {
     port_synce_conf_set_t *mreq = req->module_req;
     mepa_phy_info_t phy_info = {0};
-    mepa_synce_clock_conf_t indy_synce_conf;
+    mepa_synce_clock_conf_t lan8814_synce_conf;
     vtss_phy_10g_sckout_conf_t phy10g_synce_conf;
     struct mepa_device *dev = meba_phy_instances->phy_devices[req->port_no];
     demo_phy_info_t phy_family;
@@ -142,9 +142,9 @@ static void cli_cmd_synce_conf_set(cli_req_t *req)
         T_E("\n Error in Detecting PHY Family on Port %d\n", req->port_no);
         return;
     }
-    if((phy_family.family == PHY_FAMILY_INDY) || (phy_family.family == PHY_FAMILY_VIPER))
+    if((phy_family.family == PHY_FAMILY_LAN8814) || (phy_family.family == PHY_FAMILY_VIPER))
     {
-        /* INDY PHY or VIPER PHY*/
+        /* lan8814 PHY or VIPER PHY*/
         if(mreq->src > SYNCE_CLOCK_SRC_CLOCK_IN_2)
         {
             T_E("\n Provide valid clock source for the PHY \n");
@@ -160,12 +160,12 @@ static void cli_cmd_synce_conf_set(cli_req_t *req)
             T_E("\n Provide valid clock output for the PHY \n");
             return;
         }
-        indy_synce_conf.src = mreq->src;
-        indy_synce_conf.freq = mreq->freq;
-        indy_synce_conf.dst = mreq->dst;
-        if((meba_phy_synce_clock_conf_set(meba_phy_instances, req->port_no, &indy_synce_conf)) != MESA_RC_OK)
+        lan8814_synce_conf.src = mreq->src;
+        lan8814_synce_conf.freq = mreq->freq;
+        lan8814_synce_conf.dst = mreq->dst;
+        if((meba_phy_synce_clock_conf_set(meba_phy_instances, req->port_no, &lan8814_synce_conf)) != MESA_RC_OK)
         {
-            T_E("\nINDY: Error setting Synce configuration \n");
+            T_E("\nlan8814: Error setting Synce configuration \n");
             return;
         }
     } else if(phy_family.family == PHY_FAMILY_MALIBU_10G) {
@@ -227,7 +227,7 @@ static void cli_cmd_synce_conf_set(cli_req_t *req)
 
 static void cli_cmd_chip_specific_synce_conf(cli_req_t *req)
 {
-    mepa_synce_clock_conf_t indy_synce_conf;
+    mepa_synce_clock_conf_t lan8814_synce_conf;
     vtss_phy_10g_sckout_conf_t phy10g_synce_conf;
     struct json_object *jobj = NULL;
     json_rpc_req_t json_req = {};
@@ -278,19 +278,19 @@ static void cli_cmd_chip_specific_synce_conf(cli_req_t *req)
             T_E("could not parse parms from file: %s", req->file_name);
             goto file_close;
         }
-        if((phy_family.family == PHY_FAMILY_INDY) || (phy_family.family == PHY_FAMILY_VIPER))
+        if((phy_family.family == PHY_FAMILY_LAN8814) || (phy_family.family == PHY_FAMILY_VIPER))
         {
             if(json_rpc_get_name_json_object(&json_req, jobj, "1g_synce", &json_req.params) != MESA_RC_OK)
             {
                 T_E("object name not found in file: %s", req->file_name);
                 goto file_close;
             }
-            if(json_rpc_get_mepa_synce_clock_conf_t(&json_req, json_req.params, &indy_synce_conf) != MESA_RC_OK)
+            if(json_rpc_get_mepa_synce_clock_conf_t(&json_req, json_req.params, &lan8814_synce_conf) != MESA_RC_OK)
             {
                 T_E("Error in the json configuration");
                 goto file_close;
             }
-            if(meba_phy_synce_clock_conf_set(meba_phy_instances, req->port_no, &indy_synce_conf) != MESA_RC_OK)
+            if(meba_phy_synce_clock_conf_set(meba_phy_instances, req->port_no, &lan8814_synce_conf) != MESA_RC_OK)
                 T_E("Error in Configuring the SyncE");
             goto file_close;
 

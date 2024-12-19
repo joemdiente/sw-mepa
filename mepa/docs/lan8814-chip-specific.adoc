@@ -70,7 +70,7 @@ If the application has missed to set rep_cnt with `lan8814_rep_count_set()`, the
 
 Downshift allows an interface to link at a lower advertised speed when unable to establish a stable link at the maximum speed. For ex: LAN8814 is configured for 1G Speed
 and unable to establish link, then downshift will be performed to 100M Speed.
-This Downshift can be enabled for LAN8814 via `lan8814_downshift_conf_set()` with the attribute `lan8814_phy_downshift_t`.
+This Downshift can be enabled for LAN8814 via `lan8814_downshift_conf_set()` with the attribute `lan8814_downshift_conf_t`.
 In LAN8814 Hardware support for Downshift is not available and a software solution has been added. Downshift will be triggered
 if it exceeds the threshold wait time configured by the application. A sample application example is provided down below.
 

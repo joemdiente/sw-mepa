@@ -11,11 +11,11 @@ def licenses(top, output_file = nil, prv_release = nil, cur_release = nil)
     license_options[:release_version_prv] = prv_release
     license_options[:release_version_cur] = cur_release
 
-    license_options[:hdr_pre]  = "This file provides a summary of the licenses included in or used by the MESA\n"
+    license_options[:hdr_pre]  = "This file provides a summary of the licenses included in or used by the MEPA\n"
     license_options[:hdr_pre] += "sources, along with the raw licenses for each package.\n"
     license_options[:hdr_pre] += "\n"
-    license_options[:hdr_pre] += "Notice: The MESA package includes pre-built binary firmware images. These\n"
-    license_options[:hdr_pre] += "        images consist of the binary MESA artifacts appended to a BSP.\n"
+    license_options[:hdr_pre] += "Notice: The MEPA package includes pre-built binary firmware images. These\n"
+    license_options[:hdr_pre] += "        images consist of the binary MEPA artifacts appended to a BSP.\n"
     license_options[:hdr_pre] += "        The combined set of licenses for these images can be found in\n"
     license_options[:hdr_pre] += "        ./bin/<preset>/licenses.txt\n"
     license_options[:hdr_pre] += "\n"
@@ -24,7 +24,7 @@ def licenses(top, output_file = nil, prv_release = nil, cur_release = nil)
     license_options[:hdr_post] += "To obtain the source, please contact sales/marketing\n\n"
     license_options[:hdr_post] += "\n"
 
-    licenses = CLicenseCollection.new("MESA", license_options)
+    licenses = CLicenseCollection.new("MEPA", license_options)
     licenses.concat(api_licenses)
     if output_file
         File.open(output_file, "w") do |lic|

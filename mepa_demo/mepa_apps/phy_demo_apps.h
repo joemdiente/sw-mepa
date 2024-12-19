@@ -21,7 +21,7 @@
 #define PHY_TYPE_8572   8572
 #define PHY_TYPE_8552   8552
 
-/* Indy PHY Part Number */
+/* LAN8814 PHY Part Number */
 #define PHY_TYPE_8814   8814
 
 
@@ -29,7 +29,7 @@ typedef enum {
     PHY_FAMILY_MALIBU_10G,
     PHY_FAMILY_VIPER,
     PHY_FAMILY_TESLA,
-    PHY_FAMILY_INDY,
+    PHY_FAMILY_LAN8814,
     PHY_FAMILY_MALIBU_25G,
 } phy_family_t;
 

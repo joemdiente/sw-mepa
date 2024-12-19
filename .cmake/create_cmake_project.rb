@@ -63,13 +63,21 @@ if c[:mesa]
     run "sh -c \"rm -r sw-mesa\""
   end
   puts "Fetching latest copy..."
-  #dw_file = "mesa-#{c[:mesa]}-#{c[:mesa_id]}@#{c[:mesa_branch]}"
-  dw_file = "mesa-#{c[:mesa]}#{c[:mesa_id]}#{c[:mesa_branch]}"
+  dw_file = "mesa-#{c[:mesa]}"
+  if c[:mesa_id]
+      dw_file += "-#{c[:mesa_id]}"
+  end
+  if c[:mesa_branch]
+      dw_file += "@#{c[:mesa_branch]}"
+  end
   bcmd = "sudo .cmake/docker/mchp-install-pkg -t mesa/#{c[:mesa]}-#{c[:mesa_id]}@#{c[:mesa_branch]} #{dw_file}"
   run bcmd
   run "mkdir -p sw-mesa && cp -r /opt/mscc/#{dw_file}/* sw-mesa"
+  # update meba, demo folder in sw-mesa
+  run "rm -r sw-mesa/meba sw-mesa/mesa/demo"
+  run "cp -r board-configs sw-mesa/meba"
+  run "cp -r mepa_demo sw-mesa/mesa/demo"
 end
-
 
 # Not all presets uses a brsdk, some only uses the toolchain
 if c[:brsdk]
@@ -79,19 +87,11 @@ if c[:brsdk]
     base = brsdk_base
 
     if not File.exist? brsdk_base
-        if File.exist? "/usr/local/bin/mscc-install-pkg"
-            if c[:brsdk_branch]
-                run "sudo /usr/local/bin/mscc-install-pkg -t brsdk/#{c[:brsdk]}-#{c[:brsdk_branch]} #{brsdk_name};"
-                #run "sudo /usr/local/bin/mscc-install-pkg -t brsdk/#{c[:brsdk]} #{brsdk_name};"
-            else
-                run "sudo /usr/local/bin/mscc-install-pkg -t brsdk/#{c[:brsdk]} #{brsdk_name};"
-            end
+        if c[:brsdk_branch]
+            run "sudo .cmake/docker/mchp-install-pkg -t brsdk/#{c[:brsdk]}-#{c[:brsdk_branch]} #{brsdk_name};"
+            #run "sudo /usr/local/bin/mscc-install-pkg -t brsdk/#{c[:brsdk]} #{brsdk_name};"
         else
-            puts "Please install the BSP: #{brsdk_base}"
-            puts ""
-            puts "This may be done by using the following command:"
-            puts "sudo sh -c \"mkdir -p /opt/mscc && wget -O- http://mscc-ent-open-source.s3-eu-west-1.amazonaws.com/public_root/bsp/#{brsdk_name}.tar.gz | tar -xz -C /opt/mscc/\""
-            exit 1
+            run "sudo .cmake/docker/mchp-install-pkg -t brsdk/#{c[:brsdk]} #{brsdk_name};"
         end
     end
 
@@ -110,15 +110,7 @@ tc_name = "mscc-toolchain-bin-#{tc_conf["toolchain"]}"
 tc_base = "/opt/mscc/mscc-toolchain-bin-#{tc_conf["toolchain"]}"
 
 if not File.exist? tc_base
-    if File.exist? "/usr/local/bin/mscc-install-pkg"
-        run "sudo /usr/local/bin/mscc-install-pkg -t toolchains/#{tc_folder} #{tc_name};"
-    else
-        puts "Please install the toolchain: #{tc_name} into /opt/mscc/"
-        puts ""
-        puts "This may be done by using the following command:"
-        puts "sudo sh -c \"mkdir -p /opt/mscc && wget -O- http://mscc-ent-open-source.s3-eu-west-1.amazonaws.com/public_root/toolchain/#{tc_name}.tar.gz | tar -xz -C /opt/mscc/\""
-        exit 1
-    end
+    run "sudo .cmake/docker/mchp-install-pkg -t toolchains/#{tc_folder} #{tc_name};"
 end
 
 run "mkdir -p #{out}"

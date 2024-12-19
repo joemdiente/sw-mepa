@@ -306,14 +306,23 @@ $default_configs = "istax_multi.mk"
 #      "4ad1ba4ef2@master.laguna-ptp",   # Apl release to use
 #      $default_configs)                 # Configs to build
 
-check("backwards-check",               # Name of check
-      "3249852312@poe_appl_2_5_24",    # Apl release to use
-      $default_configs)                # Configs to build
+#check("backwards-check",               # Name of check
+#      "3249852312@poe_appl_2_5_24",    # Apl release to use
+#      $default_configs)                # Configs to build
+
 #TODO
+
+# Change in PTP multi domain timestamp read.
+check("backwards-check",               # Name of check
+      "bbf146998f@master.APPL-6095",   # Apl release to use
+      $default_configs)                # Configs to build
+
 
 #check("backwards-check",              # Name of check
 #      "3ecc5279ed@master", # Appl release to use
 #      $default_configs)               # Configs to build
+
+
 
 # This will be activated when we get to the 4.2 release
 # This is the backwards compability check against 4.2.0

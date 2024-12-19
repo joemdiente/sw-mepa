@@ -290,6 +290,7 @@ def process_adoc dir, base, ext, content
 
     # expand mscc-sym
     xml.css("code").each do |e|
+        #puts "e.inner_text is => #{e.inner_text}"
         case e.inner_text
 
         # TODO, delete this
@@ -306,10 +307,9 @@ def process_adoc dir, base, ext, content
              /^(debug_\w+)$/, /^(debug_\w+)\([^\)]*\)$/,
              /^(miim_\w+)$/, /^(miim_\w+)\([^\)]*\)$/,
              /^(mmd_\w+)$/, /^(mmd_\w+)\([^\)]*\)$/,
-             /^(port_miim_\w+)$/, /^(port_miim_\w+)\([^\)]*\)$/, /^(lan8814_\w+)\([^\)]*\)$/
+             /^(port_miim_\w+)$/, /^(port_miim_\w+)\([^\)]*\)$/, /^(lan8814_\w+)$/, /^(lan8814_\w+)\([^\)]*\)$/
             sym = $symbol_index[$1]
             sym_name = $1
-
             if sym
                 symbol_obj_push($1, :articles, { :type => "not sure", :file => "#{dir}/#{base}", :line => 0 })
                 snip = "<code><a href=\"#symd:#{sym_name}\">#{e.inner_text}</a></code>"
@@ -319,14 +319,15 @@ def process_adoc dir, base, ext, content
             end
 
         # Members in structures
-        when /^(mepa_\w+)::(\w+)$/, /^(mepa_\w+)::(\w+)\([^\)]*\)$/, 
-             /^(mscc_phy_\w+)::(\w+)$/, /^(mscc_phy_\w+)::(\w+)\([^\)]*\)$/, 
-             /^(lan8814_\w+)::(\w+)$/, /^(lan8814_phy_\w+)::(\w+)\([^\)]*\)$/
+        when /^(mepa_\w+)::(\w+)$/, /^(mepa_\w+)::(\w+)\([^\)]*\)$/,
+             /^(lan8814_\w+)::(\w+)$/,
+             /^(mscc_phy_\w+)::(\w+)$/, /^(mscc_phy_\w+)::(\w+)\([^\)]*\)$/
             sym_name = "#{$1}::#{$2}"
             idx = $1.size + 2
             sym_text = e.inner_text[idx..-1]
             sym = $symbol_index[sym_name]
 
+            #puts "sym name is => #{sym_name} idx is -> #{idx} sym is => #{sym} sym_text is #{sym_text}"
             if sym
                 symbol_obj_push($1, :articles, { :type => "not sure", :file => "#{dir}/#{base}", :line => 0 })
                 snip = "<code><a href=\"#symd:#{sym_name}\">#{sym_text}</a></code>"

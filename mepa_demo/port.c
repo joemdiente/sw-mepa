@@ -400,10 +400,10 @@ static void port_setup(mesa_port_no_t port_no, mesa_bool_t aneg, mesa_bool_t ini
 
 static mesa_rc port_status_poll(mesa_port_no_t port_no)
 {
-    mesa_rc              rc;
     port_entry_t         *entry = &port_table[port_no];
-    mesa_port_status_t   *ps = &entry->status;;
+    mesa_port_status_t   *ps = &entry->status;
     mepa_status_t        status;
+    mesa_rc              rc;
 
     T_N("Enter, port %d", port_no);
     if (!entry->in_bound_status) {
@@ -416,9 +416,11 @@ static mesa_rc port_status_poll(mesa_port_no_t port_no)
             ps->copper = status.copper;
             ps->fiber = status.fiber;
         } else {
+            memset(ps, 0 , sizeof(mesa_port_status_t));
             T_E("meba_phy_status_poll(%u) failed", port_no);
         }
     } else if ((rc = meba_port_status_get(meba_global_inst, port_no, ps)) != MESA_RC_OK) {
+        memset(ps, 0 , sizeof(mesa_port_status_t));
         T_E("meba_port_status_get(%u) failed", port_no);
     }
     T_N("Exit, port %d", port_no);
@@ -1815,7 +1817,7 @@ static void port_init(meba_inst_t inst)
             break;
         case MESA_PORT_INTERFACE_SGMII_CISCO:
             if (cap & MEBA_PORT_CAP_COPPER) {
-                entry->media_type = MSCC_PORT_TYPE_CU; // Indy phys
+                entry->media_type = MSCC_PORT_TYPE_CU; // LAN8814 phys
             } else {
                 entry->media_type = MSCC_PORT_TYPE_SFP;
             }
@@ -1865,6 +1867,7 @@ static void port_init(meba_inst_t inst)
         if (entry->media_type == MSCC_PORT_TYPE_CU) {
             mepa_reset_param_t phy_reset = {};
             phy_reset.media_intf = MESA_PHY_MEDIA_IF_CU;
+            phy_reset.reset_point = MEPA_RESET_POINT_DEFAULT;
             T_I("phy_reset: %u", port_no);
             rc = (meba_phy_reset(inst, port_no, &phy_reset));
             if (rc == MESA_RC_NOT_IMPLEMENTED || rc == MESA_RC_OK) {
@@ -1892,7 +1895,7 @@ static void port_init(meba_inst_t inst)
         if (entry->media_type == MSCC_PORT_TYPE_CU) {
             mepa_reset_param_t phy_reset = {};
             phy_reset.media_intf = MESA_PHY_MEDIA_IF_CU;
-            phy_reset.reset_point = MEPA_RESET_POINT_POST_MAC;
+            phy_reset.reset_point = MEPA_RESET_POINT_POST;
             rc = (meba_phy_reset(inst, port_no, &phy_reset));
         }
 

@@ -125,7 +125,7 @@ may be specified interactively through the ccmake GUI.
 The CMake project allows you to select what targets to build. By default, BUILD_mepa
 (mepa common) is selected. Other targets should be selected as per requirement.
 
-Sample run of LAN8814(Indy) library:
+Sample run of LAN8814 library:
 
 ----
 cd build-arm64

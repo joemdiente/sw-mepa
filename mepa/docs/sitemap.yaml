@@ -3,7 +3,7 @@
 
 ---
 conf:
-    rel_name: "MEPA-2024.09"
+    rel_name: "MEPA-2024.12"
 
 pages:
     - name: "README"
@@ -25,7 +25,8 @@ pages:
           src:  "mepa/docs/release-notes/mepa-2023.09.adoc"
         - name: "MEPA-2024.09"
           src:  "mepa/docs/release-notes/mepa-2024.09.adoc"
-
+        - name: "MEPA-2024.12"
+          src:  "mepa/docs/release-notes/mepa-2024.12.adoc"
 
     - name: "Introduction"
       src:  "mepa/docs/introduction.adoc"
@@ -36,6 +37,7 @@ pages:
     - name: "Functional descriptions"
       pages:
         - src: "mepa/docs/mepa_instantiation.adoc"
+        - src: "mepa/docs/linkup_config.adoc"
         - src: "mepa/docs/basic.adoc"
         - src: "mepa/docs/diag.adoc"
         - src: "mepa/docs/events.adoc"
@@ -43,7 +45,6 @@ pages:
         - src: "mepa/docs/macsec.adoc"
         - src: "mepa/docs/warm-restart-phy.adoc"
         - src: "mepa/docs/eee.adoc"
-        - src: "mepa/docs/phy-reset-considerations.adoc"
 
     - name: "PHY-Specific Functional Descriptions"
       pages:
@@ -52,7 +53,7 @@ pages:
 
     - name: "MEPA API Reference"
       pages:
-        - src:  "sw-mesa/me/include/microchip/ethernet/common.h"
+        - src:  "me/include/microchip/ethernet/common.h"
         - src:  "mepa/include/microchip/ethernet/phy/api/phy_ts.h"
         - src:  "mepa/include/microchip/ethernet/phy/api/phy_macsec.h"
         - src:  "mepa/include/microchip/ethernet/phy/api/types.h"

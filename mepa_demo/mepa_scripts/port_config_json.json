@@ -24,7 +24,7 @@
 		  "conf_10g": { 
 			      "oper_mode": "MEPA_PHY_LAN_MODE", 
 			      "interface_mode": "MEPA_PHY_SFI_XFI", 
-			      "channel_id": 4, 
+			      "channel_id": "MEPA_CHANNELID_3", 
 			      "h_media": "MEPA_MEDIA_TYPE_SR", 
 			      "l_media": "MEPA_MEDIA_TYPE_SR", 
 			      "channel_high_to_low": 1 

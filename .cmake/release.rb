@@ -441,9 +441,9 @@ end
 #run("ln -s mipsel #{$ws}/bin/mips")
 
 # Update latest mepa and board-configs in sw-mesa for backward compatability check
-run("rm -rf sw-mesa/mepa sw-mesa/meba")
+run("rm -rf sw-mesa/mepa")
 run("cp -r #{$ws}/mepa sw-mesa/mepa")
-run("cp -r #{$ws}/board-configs sw-mesa/mepa")
+#run("cp -r #{$ws}/board-configs sw-mesa/mepa")
 
 # create a mesa.tar.gz , which is needed for backward compatability check
 run("tar -czf images/mesa-checkBC.tar.gz --exclude '*_workspace' --transform 's,^./#{$ws}/sw-mesa,./#{out_name},' ./#{$ws}/sw-mesa")

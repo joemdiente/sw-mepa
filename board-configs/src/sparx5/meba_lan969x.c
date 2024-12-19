@@ -18,7 +18,7 @@
 #define VTSS_MSLEEP(m) usleep((m) * 1000)
 #define VTSS_TS_IO_ARRAY_SIZE 8 // Laguna has 8 pins compared to 4 on FireAnt.
 
-#define INDYPHY_INTERRUPT 11
+#define LAN8814PHY_INTERRUPT 11
 
 /* Local mapping table */
 typedef struct {
@@ -188,7 +188,7 @@ static mesa_rc lan969x_board_init(meba_inst_t inst)
     }
 
     /* Configure GPIO 11 as interrupt from PHYs */
-    (void)mesa_gpio_mode_set(NULL, 0, INDYPHY_INTERRUPT, MESA_GPIO_IN_INT);
+    (void)mesa_gpio_mode_set(NULL, 0, LAN8814PHY_INTERRUPT, MESA_GPIO_IN_INT);
 
     /* Configure GPIO 57 as PTP.SYNC3 for the PHYs*/
     mesa_ts_ext_io_mode_t pps_mode = {MESA_TS_EXT_IO_MODE_ONE_PPS_OUTPUT, 0, 0} ;
@@ -796,18 +796,18 @@ static mesa_rc gpio_handler(meba_inst_t inst, meba_board_state_t *board, meba_ev
                 signal_notifier(MEBA_EVENT_PUSH_BUTTON, 0);
                 handled++;
             }
-            // Interrupt from all Indy PHYs are OR'ed together on
-            // GPIO11. As long as there is one Indy PHY with a pending
+            // Interrupt from all LAN8814 PHYs are OR'ed together on
+            // GPIO11. As long as there is one LAN8814 PHY with a pending
             // interrupt, GPIO11 will remain low. As GPIO is edge
             // triggered, a new interrupt will only be seen when all
             // PHY interrups have been handled and cleared. Therefore,
             // continue to call interrupt handler as long as GPIO11 is
             // low.
 
-            if (gpio_events[INDYPHY_INTERRUPT]) { // Interrupt from PHYs
+            if (gpio_events[LAN8814PHY_INTERRUPT]) { // Interrupt from PHYs
                 mesa_bool_t gpio_state;
-                while (MESA_RC_OK==mesa_gpio_read(NULL, 0, INDYPHY_INTERRUPT, &gpio_state) && gpio_state == 0) {
-                    T_I(inst, "Got interrupt from gpio #%u value: %d", INDYPHY_INTERRUPT, gpio_state);
+                while (MESA_RC_OK==mesa_gpio_read(NULL, 0, LAN8814PHY_INTERRUPT, &gpio_state) && gpio_state == 0) {
+                    T_I(inst, "Got interrupt from gpio #%u value: %d", LAN8814PHY_INTERRUPT, gpio_state);
 
                     if ((rc = phy_interrupt_handler(inst, board, signal_notifier)) == MESA_RC_OK) {
                         handled++;

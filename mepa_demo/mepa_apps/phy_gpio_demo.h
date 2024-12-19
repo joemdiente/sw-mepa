@@ -7,7 +7,7 @@
 
 
 #define MAX_SUPPORTED_ALT_FUN_VIPER 14
-#define MAX_SUPPORTED_ALT_FUN_INDY  16
+#define MAX_SUPPORTED_ALT_FUN_LAN8814  16
 
 #define MALIBU10G_EVENT           2
 #define MALIBU10G_EXTENDED_EVENT  3
@@ -43,7 +43,7 @@ gpio_table_t viper[MAX_SUPPORTED_ALT_FUN_VIPER] = {//Alt mode    // gpio_no    /
                                                        {13,              13,       "1588 SPI DO"},
                                                      };
 													 
-gpio_table_t indy[MAX_SUPPORTED_ALT_FUN_INDY] = {//Alt mode    // gpio_no    // Alt Funct
+gpio_table_t lan8814[MAX_SUPPORTED_ALT_FUN_LAN8814] = {//Alt mode    // gpio_no    // Alt Funct
                                                      {0,               0,        "1588 Event A"},
                                                      {1,               1,        "1588 Event B"},
                                                      {2,               2,        "1588 Ref Clk"},

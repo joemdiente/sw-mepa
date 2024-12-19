@@ -18,6 +18,7 @@
 #define PHY_ID_GPY241 0xDC00
 #define COMA_GPIO 33
 #define VTSS_TS_IO_ARRAY_SIZE 4
+#define MIIM_FREQ_CONTROLLER_0 2200000
 
 /* LED colors */
 typedef enum {
@@ -147,6 +148,44 @@ static const fa_malibu_gpio_port_map_t malibu_gpio_map[] = {
 };
 #endif
 
+/* EDSx SFP Slot Port Mapping table */
+static edsx_slot_port_t slot_map[] = {
+   [VTSS_BOARD_CONF_20x10G_NPI] = {
+        .sfp_slot1_port = 12,
+        .sfp_slot2_port = 16,
+   },
+
+   [VTSS_BOARD_CONF_8x25G_NPI] = {
+        .sfp_slot1_port = 0,
+        .sfp_slot2_port = 4,
+   },
+
+   [VTSS_BOARD_CONF_6x10G_NPI] = {
+        .sfp_slot1_port = -1,
+        .sfp_slot2_port = -1,
+   },
+
+   [VTSS_BOARD_CONF_9x10G_NPI] = {
+        .sfp_slot1_port = -1,
+        .sfp_slot2_port = -1,
+   },
+   
+   [VTSS_BOARD_CONF_16x10G_NPI] = {
+        .sfp_slot1_port = 12,
+        .sfp_slot2_port = -1,
+   },
+
+   [VTSS_BOARD_CONF_12x10G_NPI] = {
+        .sfp_slot1_port = -1,
+        .sfp_slot2_port = -1,
+   },
+
+   [VTSS_BOARD_CONF_10x10G_4x25G_NPI] = {
+        .sfp_slot1_port = -1,
+        .sfp_slot2_port = -1,
+   },
+};
+
 meba_inst_t lan969x_initialize(meba_inst_t inst, const meba_board_interface_t *callouts);
 
 static const meba_aux_rawio_t rawio = {
@@ -194,7 +233,7 @@ static void fa_gpy241_detect(meba_inst_t inst)
         board->gpy241_present = FALSE;
     } else {
         // Did not find Elise Phy which means PCB135 version 3
-        // Note Indy / Maxlinear phy's are in reset at this point
+        // Note lan8814 / Maxlinear phy's are in reset at this point
         board->gpy241_present = TRUE;
         /* Default to SGMII mode */
         board->gpy241_usxgmii_mode = FALSE;
@@ -360,7 +399,7 @@ static void fa_pcb135_init_port(meba_inst_t inst, mesa_port_no_t port_no, meba_p
             entry->poe_port    = entry->map.chip_port % 24; // Each PD69200 controller controls 24 ports.
             entry->poe_support = true;
             if (board->gpy241_present) {
-                // PCB135 rev 4,5 with Indy Phy. Each Phy covers 4 ports
+                // PCB135 rev 4,5 with lan8814 Phy. Each Phy covers 4 ports
                 entry->phy_base_port = (port_no / 4)*4;
             }
         } else if (port_no < 28) {
@@ -391,7 +430,7 @@ static void fa_pcb135_init_port(meba_inst_t inst, mesa_port_no_t port_no, meba_p
             entry->poe_port    = entry->map.chip_port % 24; // Each PD69200 controller controls 24 ports.
             entry->poe_support = true;
             if (board->gpy241_present) {
-                // PCB135 rev 4,5 with Indy Phy. Each Phy covers 4 ports
+                // PCB135 rev 4,5 with lan8814 Phy. Each Phy covers 4 ports
                 entry->phy_base_port = (port_no / 4)*4;
             }
         } else if (port_no < 52) {
@@ -420,7 +459,7 @@ static void fa_pcb135_init_port(meba_inst_t inst, mesa_port_no_t port_no, meba_p
     case VTSS_BOARD_CONF_48x1G_8x10G_NPI:
         if (port_no < 48) {
             if (board->gpy241_present) {
-                // PCB135 rev 4,5 with Indy Phy. Each Phy covers 4 ports
+                // PCB135 rev 4,5 with lan8814 Phy. Each Phy covers 4 ports
                 entry->phy_base_port = (port_no / 4)*4;
                 board->port[port_no].ts_phy = true;
             }
@@ -548,7 +587,7 @@ static void fa_pcb135_board_init(meba_inst_t inst)
     (void) mesa_gpio_write(NULL, 0, AQR_RESET, true);
 
     if (board->gpy241_present) {
-        // Reset Indy phy (GPIO 19)
+        // Reset lan8814 phy (GPIO 19)
         gpio_no = 19;
         (void)mesa_gpio_mode_set(NULL, 0, gpio_no, MESA_GPIO_OUT);
         (void)mesa_gpio_write(NULL, 0, gpio_no, 0);
@@ -861,7 +900,7 @@ static uint32_t fa_capability(meba_inst_t inst, int cap)
             return 0;
         case MEBA_CAP_TEMP_SENSORS:
             if ((board->type == BOARD_TYPE_SPARX5_PCB135) && (board->gpy241_present)) {
-                // This is PCB135 rev C. Temp sensors not yet implemented for INDY
+                // This is PCB135 rev C. Temp sensors not yet implemented for lan8814
                 return 0;
             } 
             return 1;
@@ -1468,20 +1507,34 @@ static mesa_rc fa_gpio_func_info_get(meba_inst_t inst,
     }
     return rc;
 }
+
 static mesa_rc fa_reset(meba_inst_t inst, meba_reset_point_t reset)
 {
     meba_board_state_t *board = INST2BOARD(inst);
     mesa_rc rc = MESA_RC_OK;
     mesa_sgpio_conf_t  conf;
+    int start_port_slot1;
+    int start_port_slot2;
 
     T_D(inst, "Called - %d", reset);
     switch (reset) {
         case MEBA_BOARD_INITIALIZE:
             board->func->board_init(inst);
-            for(int port = 12; port < 16; port++) /* slot 1 scanning */
-                phy_25g_slot1_scan(inst, port, &board->port[port].map);
-            for(int port = 16; port < 20; port++) /* slot 2 scanning */
-                phy_25g_slot2_scan(inst, port, &board->port[port].map);
+            /* PHYs Connected to EDSx will work at 2.2MHz MDC Frequency */
+            mesa_mdio_conf_t  mdio_conf;
+            mdio_conf.miim_freq = MIIM_FREQ_CONTROLLER_0;
+            mesa_mdio_conf_set(NULL, MESA_MIIM_CONTROLLER_0, &mdio_conf);
+
+            start_port_slot1 = slot_map[board->port_cfg].sfp_slot1_port;
+	    start_port_slot2 = slot_map[board->port_cfg].sfp_slot2_port;
+
+            if(slot_map[board->port_cfg].sfp_slot1_port >= 0) {
+                for(int port = start_port_slot1; port < (start_port_slot1 + 4); port++) /* slot 1 scanning */
+                    phy_25g_slot1_scan(inst, board->port[port].board_port, &board->port[port].map, start_port_slot1);
+            } if(slot_map[board->port_cfg].sfp_slot2_port >= 0) {
+                for(int port = start_port_slot2; port < (start_port_slot2 + 4); port++) /* slot 2 scanning */
+                    phy_25g_slot2_scan(inst, board->port[port].board_port, &board->port[port].map, start_port_slot2);
+            }
             break;
 
         case MEBA_PORT_RESET:
@@ -1518,7 +1571,7 @@ static mesa_rc fa_reset(meba_inst_t inst, meba_reset_point_t reset)
                     }
                 }
             } else if (board->gpy241_present) {
-                // Release COMA mode (activate Indy phys)
+                // Release COMA mode (activate lan8814 phys)
                 mesa_gpio_direction_set(NULL, 0, COMA_GPIO, true);
                 mesa_gpio_write(NULL, 0, COMA_GPIO, false);
             }
@@ -1552,7 +1605,7 @@ static mesa_rc fa_reset(meba_inst_t inst, meba_reset_point_t reset)
             }
 
             if (board->type == BOARD_TYPE_SPARX5_PCB135 && board->gpy241_present) {
-                // Indy LED setup to fix a board layout issue
+                // lan8814 LED setup to fix a board layout issue
                 mepa_gpio_conf_t gpio_conf;
                 gpio_conf.mode = MEPA_GPIO_MODE_LED_LINK1000_ACTIVITY;
                 gpio_conf.led_num = MEPA_LED0;
@@ -1624,13 +1677,17 @@ static mesa_rc fa_reset(meba_inst_t inst, meba_reset_point_t reset)
             meba_phy_driver_init(inst);
             break;
         case MEBA_ENTRY_PHY_SET:
-            for(int port = 12; port < 16; port++){ /* slot 1 scanning */
-                phy_25g_slot1_scan(inst, port, &board->port[port].map);
-                //printf("%d\n",board->port[port].map.map.miim_addr);
+            start_port_slot1 = slot_map[board->port_cfg].sfp_slot1_port;
+            start_port_slot2 = slot_map[board->port_cfg].sfp_slot2_port;
+
+            if(slot_map[board->port_cfg].sfp_slot1_port >= 0) {
+                for(int port = start_port_slot1; port < (start_port_slot1 + 4); port++) /* slot 1 scanning */
+                    phy_25g_slot1_scan(inst, board->port[port].board_port, &board->port[port].map, start_port_slot1);
+            } if(slot_map[board->port_cfg].sfp_slot2_port >= 0) {
+                for(int port = start_port_slot2; port < (start_port_slot2 + 4); port++) /* slot 2 scanning */
+                    phy_25g_slot2_scan(inst, board->port[port].board_port, &board->port[port].map, start_port_slot2);
             }
-            for(int port = 16; port < 20; port++) /* slot 2 scanning */
-                phy_25g_slot2_scan(inst, port, &board->port[port].map);
-            break; 
+            break;
     }
     T_D(inst, "Called - %d - Done", reset);
     return rc;

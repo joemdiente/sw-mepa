@@ -114,7 +114,7 @@ test "Test SFP loop" do
 
             if (type == "MESA_PORT_INTERFACE_SGMII" || type == "MESA_PORT_INTERFACE_QSGMII")
                 spds = ["1000fdx"]
-                sleep 3 # Indy phy is slow in linkup
+                sleep 3 # LAN8814 phy is slow in linkup
             end
         end
 

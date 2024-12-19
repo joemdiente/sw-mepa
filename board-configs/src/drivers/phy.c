@@ -486,16 +486,14 @@ mepa_rc meba_port_status_get(meba_inst_t inst, mepa_port_no_t port_no, mesa_port
         }
     }
 
-    
-    if (meba_phy_status_poll(inst, port_no, &status_mepa) == MESA_RC_OK) {
-      status->link = status_mepa.link;
-      status->speed = status_mepa.speed;
-      status->fdx = status_mepa.fdx;
-      status->aneg = status_mepa.aneg;
-      status->copper = status_mepa.copper;
-      status->fiber = status_mepa.fiber;
-      return MESA_RC_OK;
-  }
+    MESA_RC(meba_phy_status_poll(inst, port_no, &status_mepa));
+    status->link = status_mepa.link;
+    status->speed = status_mepa.speed;
+    status->fdx = status_mepa.fdx;
+    status->aneg = status_mepa.aneg;
+    status->copper = status_mepa.copper;
+    status->fiber = status_mepa.fiber;
+
 #if 0
     // If the host MAC in the 10G PHY is enabled, combine with 10G PHY status
     if (vtss_phy_10g_status_get(NULL, port_no, &status_10g) == MESA_RC_OK &&
@@ -636,6 +634,15 @@ mepa_rc meba_phy_start_of_frame_conf_get(meba_inst_t inst, mepa_port_no_t port_n
         return MESA_RC_ERR_INV_PORT_BOARD;
     }
     return mepa_start_of_frame_conf_get(inst->phy_devices[port_no], conf);
+}
+
+// Set framepreemption
+mepa_rc meba_phy_framepreempt_set(meba_inst_t inst, mepa_port_no_t port_no, const mepa_bool_t value)
+{
+    if ((port_no < 0) || (port_no >= inst->phy_device_cnt)) {
+        return MESA_RC_ERR_INV_PORT_BOARD;
+    }
+    return mepa_framepreempt_set(inst->phy_devices[port_no], value);
 }
 
 // Get framepreemption

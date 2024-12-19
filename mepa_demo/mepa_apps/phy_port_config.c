@@ -11,6 +11,7 @@
 #include "cli.h"
 #include "port.h"
 #include "phy_port_config.h"
+#include "phy_demo_apps.h"
 
 static mepa_callout_t mepa_callout;
 static mepa_board_conf_t board_conf = {};
@@ -65,6 +66,7 @@ static int phy_assign_callout(void) {
 static int mepa_drv_create(const mepa_port_no_t port_no) {
     cli_printf("\n creating dev\n");
     meba_port_entry_t   entry;
+    mepa_rc rc;
     mepa_phy_info_t phy_info = {0};
     port_cnt = meba_phy_inst->api.meba_capability(meba_phy_inst, MEBA_CAP_BOARD_PORT_COUNT);
     if(port_cnt <= 0) {
@@ -87,15 +89,20 @@ static int mepa_drv_create(const mepa_port_no_t port_no) {
     meba_phy_inst->phy_device_ctx[port_no].miim_addr = entry.map.miim_addr;
     meba_phy_inst->phy_device_ctx[port_no].chip_no = entry.map.chip_no;
     board_conf.numeric_handle = port_no;
-    board_conf.vtss_instance_create = (board_conf.vtss_instance_ptr == NULL)?1:0;
-    board_conf.vtss_instance_use = (board_conf.vtss_instance_ptr == NULL)?0:1;
+
+    /*Removing the vtss_instance_create approach to match with the default vtss instance created in sw-mepa application */
 
     meba_phy_inst->phy_devices[port_no] = mepa_create(&(mepa_callout),
                                           &meba_phy_inst->phy_device_ctx[port_no],
                                           &board_conf);
 
-    if(meba_phy_inst->phy_devices[port_no]) {
+    if ((meba_phy_inst->phy_devices[port_no]) && (meba_phy_inst->phy_devices[entry.phy_base_port])) {
         T_I("Phy has been probed on port %d, MAC I/F = %d", port_no, entry.mac_if);
+        if ((rc = mepa_link_base_port(meba_phy_inst->phy_devices[port_no],
+                                      meba_phy_inst->phy_devices[entry.phy_base_port],
+                                      entry.map.chip_port)) != MESA_RC_OK) {
+            cli_printf(" Error in Linking base port to Port  : %d\n", port_no);
+        }
     } else {
         T_E("Probe failed on %d", port_no);
         return MESA_RC_ERROR;
@@ -104,35 +111,28 @@ static int mepa_drv_create(const mepa_port_no_t port_no) {
     mepa_reset_param_t phy_reset = {};
     phy_reset.media_intf = MESA_PHY_MEDIA_IF_CU;
     phy_reset.reset_point = MEPA_RESET_POINT_PRE;
-    if((mepa_reset(meba_phy_inst->phy_devices[port_no], &phy_reset) != MESA_RC_OK)) {
+    if ((mepa_reset(meba_phy_inst->phy_devices[port_no], &phy_reset) != MESA_RC_OK)) {
         T_E("Pre reset failed %d", port_no);
         return MESA_RC_ERROR;
     }
     meba_phy_info_get(meba_phy_inst, port_no, &phy_info);
-    if((phy_info.part_number & 0xfff0) != MALIBU_SPECIFIC_CHECK) {
-        phy_reset.reset_point = MEPA_RESET_POINT_DEFAULT;
-        if((mepa_reset(meba_phy_inst->phy_devices[port_no], &phy_reset) != MESA_RC_OK)) {
-            T_E("Default reset failed %d", port_no);
-            return MESA_RC_ERROR;
-        }
+    phy_reset.media_intf = ((phy_info.part_number & 0xfff0) != MALIBU_SPECIFIC_CHECK)?MESA_PHY_MEDIA_IF_CU:MESA_PHY_MEDIA_IF_FI_10G_LAN;
+    phy_reset.reset_point = MEPA_RESET_POINT_DEFAULT;
+    if ((mepa_reset(meba_phy_inst->phy_devices[port_no], &phy_reset) != MESA_RC_OK)) {
+        T_E("Default reset failed %d", port_no);
+        return MESA_RC_ERROR;
     }
     phy_reset.reset_point = MEPA_RESET_POINT_POST;
 
-    if((mepa_reset(meba_phy_inst->phy_devices[port_no], &phy_reset)!= MESA_RC_OK)) {
+    if ((mepa_reset(meba_phy_inst->phy_devices[port_no], &phy_reset)!= MESA_RC_OK)) {
         T_E("Post reset failed %d", port_no);
         return MESA_RC_ERROR;
     }
 
-    phy_reset.reset_point = MEPA_RESET_POINT_POST_MAC;
-    if((mepa_reset(meba_phy_inst->phy_devices[port_no], &phy_reset) != MESA_RC_OK)) {
-        T_E("Post mac reset failed %d", port_no);
-        return MESA_RC_ERROR;
-    }
     cli_printf("Dev created for port_no %d , id is dec:(%d) : hex(%x)\n", port_no, phy_info.part_number, phy_info.part_number);
     return MESA_RC_OK;
 
 }
-
 
 
 static int mepa_drv_del(const mepa_port_no_t port_no) {
@@ -267,6 +267,56 @@ static void cli_cmd_coma_mode(cli_req_t *req)
 
 }
 
+static void cli_cmd_fpp_set(cli_req_t *req)
+{
+    mepa_rc rc;
+    demo_phy_info_t phy_family;
+    if(meba_phy_inst->phy_devices[req->port_no] == NULL) {
+        cli_printf(" Dev is Not Created for the port : %d\n", req->port_no);
+        return;
+    }
+
+    if ((rc = phy_family_detect(meba_phy_inst, req->port_no, &phy_family)) != MEPA_RC_OK) {
+        T_E("\n Error in Detecting PHY Family on Port %d\n", req->port_no);
+        return;
+    }
+    if((phy_family.family != PHY_FAMILY_LAN8814) && (phy_family.family != PHY_FAMILY_MALIBU_25G)) {
+        T_E("\n PHY on Port :%d doesn't support Frame Preemption\n", req->port_no);
+        return;
+    }
+    if (mepa_framepreempt_set(meba_phy_inst->phy_devices[req->port_no], req->enable) != MEPA_RC_OK) {
+        T_E("\n Error in configuration Frame Preemption on Port :%d \n", req->port_no);
+        return;
+    }
+    return;
+}
+
+static void cli_cmd_fpp_get(cli_req_t *req)
+{
+    mepa_rc rc;
+    demo_phy_info_t phy_family;
+    mepa_bool_t val = 0;
+    if(meba_phy_inst->phy_devices[req->port_no] == NULL) {
+        cli_printf(" Dev is Not Created for the port : %d\n", req->port_no);
+        return;
+    }
+
+    if ((rc = phy_family_detect(meba_phy_inst, req->port_no, &phy_family)) != MEPA_RC_OK) {
+        T_E("\n Error in Detecting PHY Family on Port %d\n", req->port_no);
+        return;
+    }
+    if((phy_family.family != PHY_FAMILY_LAN8814) && (phy_family.family != PHY_FAMILY_MALIBU_25G)) {
+        T_E("\n PHY on Port :%d doesn't support Frame Preemption\n", req->port_no);
+        return;
+    }
+    if (mepa_framepreempt_get(meba_phy_inst->phy_devices[req->port_no], &val) != MEPA_RC_OK) {
+        T_E("\n Error in Getting Frame Preemption Status on Port :%d \n", req->port_no);
+        return;
+    }
+    cli_printf("\n Frame Preemption %s on Port : %d\n", val ? "Enabled" : "Disabled", req->port_no);
+    return;
+}
+
 static cli_cmd_t cli_cmd_table[] = {
     {
         "Dev Create [<port_no>]",
@@ -294,6 +344,16 @@ static cli_cmd_t cli_cmd_table[] = {
         "coma_mode [enable|disable]",
         "Enable/Disable coma mode for the PHY",
         cli_cmd_coma_mode
+    },
+    {
+        "fpp_set [<port_no>] [enable|disable]",
+        "Enable/Disable Frame Preemption on PHY",
+        cli_cmd_fpp_set
+    },
+    {
+        "fpp_get [<port_no>]",
+        "Get the Frame Preemption Status on PHY",
+        cli_cmd_fpp_get
     },
 
 };
@@ -334,8 +394,8 @@ static int cli_parm_keyword(cli_req_t *req)
 static cli_parm_t cli_parm_table[] = {
     {
         "qsgmii|sfi|sgmii",
-        "QSGMII      :  Quad serial gigabit media-independent interface (supports viper, indy) \n"
-        "SGMII       :  Serial gigabit media-independent interface (supports viper, indy)\n"
+        "QSGMII      :  Quad serial gigabit media-independent interface (supports viper, LAN8814) \n"
+        "SGMII       :  Serial gigabit media-independent interface (supports viper, LAN8814)\n"
         "SFI         :  SerDes Framer Interface (supports Malibu)\n",
         CLI_PARM_FLAG_NO_TXT | CLI_PARM_FLAG_SET,
         cli_parm_keyword
@@ -343,7 +403,7 @@ static cli_parm_t cli_parm_table[] = {
 
     {
         "1g_conf|10g_conf",
-        "1g_conf      :  1g configuration for the PHY (supports viper, indy...) \n"
+        "1g_conf      :  1g configuration for the PHY (supports viper, LAN8814...) \n"
         "10g_conf       :  10g configuration for the PHY (support malibu, venice..)\n",
         CLI_PARM_FLAG_NO_TXT | CLI_PARM_FLAG_SET,
         cli_parm_keyword

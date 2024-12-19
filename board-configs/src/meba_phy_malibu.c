@@ -22,7 +22,7 @@ typedef struct
 static const fa_malibu_gpio_port_map_t malibu_gpio_map[] = {
     /* P49: CH3 */
     {
-        VTSS_CHANNEL_3,
+        MEPA_CHANNELID_3,
         28, 34, 27, 26, 0, 25,
         ((1<<VTSS_10G_GPIO_AGGR_INTRPT_CH3_INTR0_EN) |
          (1<<VTSS_10G_GPIO_AGGR_INTRPT_IP1588_0_INTR3_EN) |
@@ -31,7 +31,7 @@ static const fa_malibu_gpio_port_map_t malibu_gpio_map[] = {
     },
     /* P50: CH2 */
     {
-	VTSS_CHANNEL_2,
+	MEPA_CHANNELID_2,
         20, 34, 19, 18, 0, 17,
         ((1<<VTSS_10G_GPIO_AGGR_INTRPT_CH2_INTR0_EN) |
          (1<<VTSS_10G_GPIO_AGGR_INTRPT_IP1588_0_INTR2_EN) |
@@ -40,7 +40,7 @@ static const fa_malibu_gpio_port_map_t malibu_gpio_map[] = {
     },
     /* P51: CH1 */
     {
-        VTSS_CHANNEL_1,
+        MEPA_CHANNELID_1,
         12, 34, 11, 10, 0, 9,
         ((1<<VTSS_10G_GPIO_AGGR_INTRPT_CH1_INTR0_EN) |
          (1<<VTSS_10G_GPIO_AGGR_INTRPT_IP1588_0_INTR1_EN) |
@@ -50,7 +50,7 @@ static const fa_malibu_gpio_port_map_t malibu_gpio_map[] = {
     },
     /* P52: CH0 */
     {
-        VTSS_CHANNEL_0,
+        MEPA_CHANNELID_0,
         4, 34, 3, 2, 0, 1,
         ((1<<VTSS_10G_GPIO_AGGR_INTRPT_CH0_INTR0_EN) |
          (1<<VTSS_10G_GPIO_AGGR_INTRPT_IP1588_0_INTR0_EN) |

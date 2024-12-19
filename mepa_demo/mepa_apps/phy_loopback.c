@@ -93,7 +93,7 @@ static void cli_cmd_loopback_conf(cli_req_t *req)
                 T_E("could not parse parms from file: %s", mreq->filename);
                 goto file_close;
             }
-            if((phy_family.family == PHY_FAMILY_INDY) || (phy_family.family == PHY_FAMILY_VIPER))
+            if((phy_family.family == PHY_FAMILY_LAN8814) || (phy_family.family == PHY_FAMILY_VIPER))
             {
                 if(json_rpc_get_name_json_object(&json_req, jobj, "1g_loopback", &json_req.params) != MESA_RC_OK)
                 {
